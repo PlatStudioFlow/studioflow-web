@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agenda — StudioFlow</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+</head>
+<body class="app">
+<script type="module" src="js/mobile-nav.js?v=1"></script>
+<script type="module" src="js/search.js?v=1"></script>
+
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="mark">
+      <img src="assets/logo.png" alt="StudioFlow" class="icon">
+      <div class="wordmark">Studio<span>Flow</span></div>
+    </div>
+    <div class="tagline">Gestão para criativos</div>
+
+    <nav>
+      <a href="dashboard.html" class="nav-item">Dashboard</a>
+      <a href="clientes.html" class="nav-item">Clientes</a>
+      <a href="orcamentos.html" class="nav-item">Orçamentos</a>
+      <a href="pipeline.html" class="nav-item">Pipeline</a>
+      <a href="agenda.html" class="nav-item active">Agenda</a>
+      <a href="entregas.html" class="nav-item">Entregas</a>
+      <a href="financeiro.html" class="nav-item">Financeiro</a>
+      <a href="conteudo.html" class="nav-item">Conteúdo</a>
+      <a href="freelancer.html" class="nav-item">Freelancer</a>
+      <a href="anotacoes.html" class="nav-item">Anotações</a>
+      <a href="tarefas.html" class="nav-item">Tarefas</a>
+      <a href="modelos.html" class="nav-item">Modelos de Pacote</a>
+    </nav>
+
+    <div class="logout">
+      <a href="configuracoes.html" class="nav-item">Configurações</a>
+      <a href="#" class="nav-item" id="btn-logout">Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1 style="font-size:26px;font-weight:800;text-transform:uppercase;margin:0;">Agenda</h1>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin:4px 0 0;">Trabalhos com data marcada e eventos avulsos que você cadastrar aqui.</p>
+      </div>
+      <button class="btn-primary" id="btn-novo">+ Novo evento</button>
+    </div>
+
+    <div class="section-block">
+      <div class="section-title-row"><h2>Próximos</h2><span class="count" id="count-futuros"></span></div>
+      <div id="area-futuros"><div class="empty-state">Carregando...</div></div>
+    </div>
+
+    <div class="section-block">
+      <div class="section-title-row"><h2>Passados</h2><span class="count" id="count-passados"></span></div>
+      <div id="area-passados"></div>
+    </div>
+  </main>
+
+</div>
+
+<!-- Modal de evento avulso -->
+<div class="modal-overlay form-modal" id="modal-evento" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2 id="modal-titulo-evento">Novo evento</h2>
+    </div>
+    <div class="modal-body">
+      <form id="form-evento">
+        <div class="field">
+          <label for="ev-titulo">Título</label>
+          <input type="text" id="ev-titulo" required>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="ev-data">Data</label>
+            <input type="date" id="ev-data" required>
+          </div>
+          <div class="field">
+            <label for="ev-horario">Horário</label>
+            <input type="text" id="ev-horario" placeholder="14:30 (opcional)">
+          </div>
+        </div>
+        <div class="field">
+          <label for="ev-notas">Notas</label>
+          <textarea id="ev-notas"></textarea>
+        </div>
+        <div class="status-msg" id="status-evento"></div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-danger" id="btn-excluir-evento" style="display:none">Excluir</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn-secondary" id="btn-cancelar-evento">Cancelar</button>
+      <button type="submit" form="form-evento" id="btn-salvar-evento">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+  import { fmtDate, STAGE_LABELS } from './js/utils.js?v=5';
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  let tenant;
+  try {
+    const profile = await ensureProfileAndTenant(session.user);
+    tenant = profile.tenants;
+    if (!isTenantActiveNow(tenant)) window.location.href = 'login.html';
+    else if (!tenant.onboarding_completo) window.location.href = 'onboarding.html';
+  } catch (err) {
+    console.error(err);
+    window.location.href = 'login.html';
+  }
+
+  document.getElementById('btn-logout').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function diasAte(isoDate) {
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const alvo = new Date(isoDate + 'T00:00:00');
+    return Math.round((alvo - hoje) / (1000 * 60 * 60 * 24));
+  }
+
+  function labelDias(d) {
+    if (d === 0) return { txt: 'hoje', cls: 'hoje' };
+    if (d === 1) return { txt: 'amanhã', cls: 'amanha' };
+    return { txt: `${d} dias`, cls: '' };
+  }
+
+  function tagClass(tag) {
+    if (tag === 'Evento avulso') return 'tag-avulso';
+    if (tag === 'Entrega') return 'tag-entrega';
+    return 'tag-evento';
+  }
+
+  function renderTabela(container, items, showDays) {
+    if (!items.length) {
+      container.innerHTML = `<div class="empty-state">Nada por aqui.</div>`;
+      return;
+    }
+    const linhas = items.map(it => {
+      const diasCol = showDays ? (() => {
+        const d = diasAte(it.data);
+        const { txt, cls } = labelDias(d);
+        return `<td><span class="days-badge ${cls}">${txt}</span></td>`;
+      })() : '';
+      return `
+        <tr data-source="${it.source}" data-id="${it.id}">
+          <td>${fmtDate(it.data)}</td>
+          <td>${it.horario || '—'}</td>
+          <td>${escapeHtml(it.titulo)}</td>
+          <td class="detail-col">${escapeHtml(it.sub || '—')}</td>
+          <td><span class="tag-pill ${tagClass(it.tag)}">${escapeHtml(it.tag)}</span></td>
+          ${diasCol}
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="list-card">
+        <table class="agenda-table">
+          <thead>
+            <tr>
+              <th>Data</th><th>Horário</th><th>Título / Cliente</th><th class="detail-col">Detalhe</th><th>Tipo</th>
+              ${showDays ? '<th>Em quantos dias</th>' : ''}
+            </tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </div>`;
+
+    container.querySelectorAll('tbody tr').forEach(tr => {
+      tr.addEventListener('click', () => {
+        if (tr.dataset.source === 'evento') abrirModalEvento(tr.dataset.id);
+        else window.location.href = 'orcamentos.html'; // trabalhos se editam na tela de Orçamentos/Pipeline
+      });
+    });
+  }
+
+  async function carregarAgenda() {
+    const [{ data: jobs }, { data: eventos }] = await Promise.all([
+      supabase.from('jobs').select('id, data_evento, horario, tipo_trabalho, stage, clients(nome)').not('data_evento', 'is', null),
+      supabase.from('eventos').select('*').order('data')
+    ]);
+
+    const items = [];
+    (jobs || []).forEach(j => {
+      if (j.stage === 'contrato') return; // só entra na agenda quando confirmado (Evento/Entrega)
+      items.push({
+        data: j.data_evento, horario: j.horario || '',
+        titulo: j.clients ? j.clients.nome : '—',
+        sub: j.tipo_trabalho || '—',
+        tag: STAGE_LABELS[j.stage] || j.stage,
+        source: 'job', id: j.id,
+      });
+    });
+    (eventos || []).forEach(e => {
+      if (!e.data) return;
+      items.push({
+        data: e.data, horario: e.horario || '',
+        titulo: e.titulo, sub: e.notas || '',
+        tag: 'Evento avulso', source: 'evento', id: e.id,
+      });
+    });
+
+    items.sort((a, b) => (a.data + (a.horario||'')).localeCompare(b.data + (b.horario||'')));
+
+    const hojeISO = new Date().toISOString().slice(0, 10);
+    const futuros = items.filter(i => i.data >= hojeISO);
+    const passados = items.filter(i => i.data < hojeISO).reverse();
+
+    document.getElementById('count-futuros').textContent = futuros.length;
+    document.getElementById('count-passados').textContent = passados.length;
+    renderTabela(document.getElementById('area-futuros'), futuros, true);
+    renderTabela(document.getElementById('area-passados'), passados, false);
+  }
+
+  // --- Modal de evento avulso ---
+  const modal = document.getElementById('modal-evento');
+  const statusEl = document.getElementById('status-evento');
+  let editandoId = null;
+
+  async function abrirModalEvento(id = null) {
+    editandoId = id;
+    statusEl.textContent = ''; statusEl.className = 'status-msg';
+    document.getElementById('btn-excluir-evento').style.display = id ? '' : 'none';
+    document.getElementById('modal-titulo-evento').textContent = id ? 'Editar evento' : 'Novo evento';
+
+    if (id) {
+      const { data: e } = await supabase.from('eventos').select('*').eq('id', id).single();
+      document.getElementById('ev-titulo').value = e.titulo || '';
+      document.getElementById('ev-data').value = e.data || '';
+      document.getElementById('ev-horario').value = e.horario || '';
+      document.getElementById('ev-notas').value = e.notas || '';
+    } else {
+      document.getElementById('ev-titulo').value = '';
+      document.getElementById('ev-data').value = '';
+      document.getElementById('ev-horario').value = '';
+      document.getElementById('ev-notas').value = '';
+    }
+    modal.style.display = 'flex';
+  }
+
+  function fecharModal() { modal.style.display = 'none'; }
+
+  document.getElementById('btn-novo').addEventListener('click', () => abrirModalEvento(null));
+  document.getElementById('btn-cancelar-evento').addEventListener('click', fecharModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) fecharModal(); });
+
+  document.getElementById('form-evento').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const titulo = document.getElementById('ev-titulo').value.trim();
+    const data = document.getElementById('ev-data').value;
+    if (!titulo || !data) {
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Informe pelo menos o título e a data.';
+      return;
+    }
+    const payload = {
+      titulo, data,
+      horario: document.getElementById('ev-horario').value.trim() || null,
+      notas: document.getElementById('ev-notas').value.trim() || null,
+    };
+
+    let error;
+    if (editandoId) {
+      ({ error } = await supabase.from('eventos').update(payload).eq('id', editandoId));
+    } else {
+      ({ error } = await supabase.from('eventos').insert({ ...payload, tenant_id: tenant.id }));
+    }
+
+    if (error) {
+      console.error(error);
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Não foi possível salvar.';
+      return;
+    }
+    fecharModal();
+    carregarAgenda();
+  });
+
+  document.getElementById('btn-excluir-evento').addEventListener('click', async () => {
+    if (!editandoId || !confirm('Excluir este evento da agenda?')) return;
+    const { error } = await supabase.from('eventos').delete().eq('id', editandoId);
+    if (error) { console.error(error); alert('Não foi possível excluir.'); return; }
+    fecharModal();
+    carregarAgenda();
+  });
+
+  carregarAgenda();
+</script>
+
+</body>
+</html>

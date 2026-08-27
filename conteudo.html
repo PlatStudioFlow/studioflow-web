@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conteúdo — StudioFlow</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+</head>
+<body class="app">
+<script type="module" src="js/mobile-nav.js?v=1"></script>
+<script type="module" src="js/search.js?v=1"></script>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="mark"><img src="assets/logo.png" alt="StudioFlow" class="icon"><div class="wordmark">Studio<span>Flow</span></div></div>
+    <div class="tagline">Gestão para criativos</div>
+    <nav>
+      <a href="dashboard.html" class="nav-item">Dashboard</a>
+      <a href="clientes.html" class="nav-item">Clientes</a>
+      <a href="orcamentos.html" class="nav-item">Orçamentos</a>
+      <a href="pipeline.html" class="nav-item">Pipeline</a>
+      <a href="agenda.html" class="nav-item">Agenda</a>
+      <a href="entregas.html" class="nav-item">Entregas</a>
+      <a href="financeiro.html" class="nav-item">Financeiro</a>
+      <a href="conteudo.html" class="nav-item active">Conteúdo</a>
+      <a href="freelancer.html" class="nav-item">Freelancer</a>
+      <a href="anotacoes.html" class="nav-item">Anotações</a>
+      <a href="tarefas.html" class="nav-item">Tarefas</a>
+      <a href="modelos.html" class="nav-item">Modelos de Pacote</a>
+    </nav>
+    <div class="logout">
+      <a href="configuracoes.html" class="nav-item">Configurações</a>
+      <a href="#" class="nav-item" id="btn-logout">Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <h1 style="font-size:26px;font-weight:800;text-transform:uppercase;margin:0;">Conteúdo</h1>
+    </div>
+
+    <div class="conteudo-toolbar">
+      <div class="job-section-label" style="margin-bottom:10px;">Gerar sugestões para um trabalho</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <select class="select-input" id="sel-job" style="max-width:360px;"></select>
+        <button class="btn-primary" id="btn-sugestoes">Gerar sugestões</button>
+        <button class="btn-primary" id="btn-30dias" style="background:var(--surface2);color:var(--ink);">Transformar em 30 dias de conteúdo</button>
+      </div>
+    </div>
+
+    <div id="area-output"></div>
+  </main>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+  import { fmtDate } from './js/utils.js?v=5';
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+  let tenant;
+  try {
+    const profile = await ensureProfileAndTenant(session.user);
+    tenant = profile.tenants;
+    if (!isTenantActiveNow(tenant)) window.location.href = 'login.html';
+    else if (!tenant.onboarding_completo) window.location.href = 'onboarding.html';
+  } catch (err) { console.error(err); window.location.href = 'login.html'; }
+
+  document.getElementById('btn-logout').addEventListener('click', async (e) => {
+    e.preventDefault(); await supabase.auth.signOut(); window.location.href = 'login.html';
+  });
+
+  function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+  // ---------- Templates (réplica exata do studioflow.py) ----------
+  const CONTENT_TYPES = ['Reels', 'Stories', 'Carrossel', 'Legenda', 'Título', 'CTA', 'Bastidores', 'Depoimento', 'Anúncio', 'Sequência de Stories'];
+
+  const TEMPLATES = {
+    'Reels': (t, c) => [
+      `Reels de bastidores do(a) ${t} de ${c}: capriche no áudio em alta e num corte dinâmico nos 3 primeiros segundos.`,
+      `Reels "antes e depois" mostrando o processo de edição de uma foto marcante do(a) ${t}.`,
+    ],
+    'Stories': (t, c) => [
+      `Stories em tempo real durante o(a) ${t}, com enquete "qual foto você quer ver primeiro?".`,
+      `Stories teaser com contagem regressiva para a entrega das fotos do(a) ${t} de ${c}.`,
+    ],
+    'Carrossel': (t, c) => [
+      `Carrossel com as melhores fotos do(a) ${t} de ${c}, uma por slide, fechando com convite para orçamento.`,
+      `Carrossel "3 momentos que mais marcaram" o(a) ${t}, contando a história por trás de cada foto.`,
+    ],
+    'Legenda': (t, c) => [
+      `"Cada detalhe do(a) ${t} de ${c} contado em imagem. Quer registrar o seu momento assim? Chama no direct."`,
+      `"Bastidores de um(a) ${t} inesquecível. Aqui, cada clique carrega uma história."`,
+    ],
+    'Título': (t, c) => [
+      `${t.charAt(0).toUpperCase() + t.slice(1)} de ${c}: os cliques que ficam`,
+      `Um olhar sobre o(a) ${t} de ${c}`,
+    ],
+    'CTA': (t, c) => [
+      `"Gostou do resultado? Manda mensagem e vamos planejar o seu ${t}."`,
+      `"Link na bio para orçamento — vagas limitadas este mês."`,
+    ],
+    'Bastidores': (t, c) => [
+      `Vídeo curto mostrando a montagem do equipamento antes do(a) ${t} de ${c}.`,
+      `Sequência de fotos dos bastidores: luz sendo ajustada, referência combinada com o cliente.`,
+    ],
+    'Depoimento': (t, c) => [
+      `Pedir para ${c} gravar um áudio ou vídeo curto contando como foi a experiência do(a) ${t}.`,
+      `Print de uma mensagem de agradecimento, publicado em formato de story fixado.`,
+    ],
+    'Anúncio': (t, c) => [
+      `Anúncio patrocinado com a melhor foto do(a) ${t} de ${c} + CTA "orçamento sem compromisso".`,
+      `Anúncio de retargeting mostrando bastidores para quem já visitou o perfil.`,
+    ],
+    'Sequência de Stories': (t, c) => [
+      `1) Capa do trabalho → 2) bastidor → 3) detalhe marcante → 4) enquete → 5) CTA de orçamento.`,
+    ],
+  };
+
+  function generateSuggestions(tipo, cliente) {
+    const t = (tipo || 'trabalho').toLowerCase();
+    const out = {};
+    CONTENT_TYPES.forEach(ct => out[ct] = TEMPLATES[ct](t, cliente));
+    return out;
+  }
+
+  function generate30Days(tipo, cliente, startDate) {
+    const t = (tipo || 'trabalho').toLowerCase();
+    const cycle = ['Bastidores', 'Stories', 'Reels', 'Carrossel', 'Sequência de Stories', 'Depoimento', 'Anúncio'];
+    const start = startDate ? new Date(startDate + 'T00:00:00') : new Date();
+    const dias = [];
+    for (let i = 0; i < 30; i++) {
+      const ct = cycle[i % cycle.length];
+      const variants = TEMPLATES[ct](t, cliente);
+      const idea = variants[i % variants.length];
+      const date = new Date(start.getTime() + i * 24 * 60 * 60 * 1000);
+      const dataStr = String(date.getDate()).padStart(2,'0') + '/' + String(date.getMonth()+1).padStart(2,'0') + '/' + date.getFullYear();
+      dias.push({ dia: i + 1, data: dataStr, tipo: ct, idea });
+    }
+    return dias;
+  }
+
+  // ---------- Carrega jobs para o seletor ----------
+  let jobsCache = [];
+  async function carregarJobs() {
+    const { data: jobs } = await supabase.from('jobs').select('id, tipo_trabalho, data_evento, clients(nome)').order('created_at', { ascending: false });
+    jobsCache = jobs || [];
+    const sel = document.getElementById('sel-job');
+    sel.innerHTML = jobsCache.length
+      ? jobsCache.map(j => {
+          const nome = j.clients ? j.clients.nome : '—';
+          const tipo = j.tipo_trabalho || 'trabalho';
+          const data = j.data_evento ? ` (${fmtDate(j.data_evento)})` : '';
+          return `<option value="${j.id}">${escapeHtml(nome)} — ${escapeHtml(tipo)}${data}</option>`;
+        }).join('')
+      : `<option value="">Cadastre um trabalho primeiro</option>`;
+  }
+
+  function jobSelecionado() {
+    const id = document.getElementById('sel-job').value;
+    return jobsCache.find(j => j.id === id) || null;
+  }
+
+  document.getElementById('btn-sugestoes').addEventListener('click', () => {
+    const job = jobSelecionado();
+    if (!job) { alert('Cadastre e selecione um trabalho primeiro.'); return; }
+    const clienteNome = job.clients ? job.clients.nome : 'cliente';
+    const sugg = generateSuggestions(job.tipo_trabalho, clienteNome);
+
+    document.getElementById('area-output').innerHTML = `
+      <h2 class="section-title">Sugestões para ${escapeHtml(clienteNome)} <span class="count">${escapeHtml(job.tipo_trabalho || '')}</span></h2>
+      <div class="conteudo-grid">
+        ${CONTENT_TYPES.map(ct => `
+          <div class="conteudo-card">
+            <div class="tipo">${ct}</div>
+            ${sugg[ct].map(idea => `<div class="ideia">${escapeHtml(idea)}</div>`).join('')}
+          </div>
+        `).join('')}
+      </div>`;
+  });
+
+  document.getElementById('btn-30dias').addEventListener('click', () => {
+    const job = jobSelecionado();
+    if (!job) { alert('Cadastre e selecione um trabalho primeiro.'); return; }
+    const clienteNome = job.clients ? job.clients.nome : 'cliente';
+    const dias = generate30Days(job.tipo_trabalho, clienteNome, job.data_evento);
+
+    document.getElementById('area-output').innerHTML = `
+      <h2 class="section-title">30 dias de conteúdo — ${escapeHtml(clienteNome)} <span class="count">${escapeHtml(job.tipo_trabalho || '')}</span></h2>
+      <div class="list-card" style="padding:6px 10px;">
+        ${dias.map(d => `
+          <div class="dia-row">
+            <span class="dia-lbl">Dia ${d.dia} · ${d.data}</span>
+            <span class="dia-tipo">${d.tipo}</span>
+            <span class="dia-ideia">${escapeHtml(d.idea)}</span>
+          </div>
+        `).join('')}
+      </div>`;
+  });
+
+  carregarJobs();
+</script>
+</body>
+</html>

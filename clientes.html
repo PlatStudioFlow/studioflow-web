@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clientes — StudioFlow</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+</head>
+<body class="app">
+<script type="module" src="js/mobile-nav.js?v=1"></script>
+<script type="module" src="js/search.js?v=1"></script>
+
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="mark">
+      <img src="assets/logo.png" alt="StudioFlow" class="icon">
+      <div class="wordmark">Studio<span>Flow</span></div>
+    </div>
+    <div class="tagline">Gestão para criativos</div>
+
+    <nav>
+      <a href="dashboard.html" class="nav-item">Dashboard</a>
+      <a href="clientes.html" class="nav-item active">Clientes</a>
+      <a href="orcamentos.html" class="nav-item">Orçamentos</a>
+      <a href="pipeline.html" class="nav-item">Pipeline</a>
+      <a href="agenda.html" class="nav-item">Agenda</a>
+      <a href="entregas.html" class="nav-item">Entregas</a>
+      <a href="financeiro.html" class="nav-item">Financeiro</a>
+      <a href="conteudo.html" class="nav-item">Conteúdo</a>
+      <a href="freelancer.html" class="nav-item">Freelancer</a>
+      <a href="anotacoes.html" class="nav-item">Anotações</a>
+      <a href="tarefas.html" class="nav-item">Tarefas</a>
+      <a href="modelos.html" class="nav-item">Modelos de Pacote</a>
+    </nav>
+
+    <div class="logout">
+      <a href="configuracoes.html" class="nav-item">Configurações</a>
+      <a href="#" class="nav-item" id="btn-logout">Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <h1 style="font-size:26px;font-weight:800;text-transform:uppercase;margin:0;">Clientes</h1>
+      <button class="btn-primary" id="btn-novo">+ Novo cliente</button>
+    </div>
+
+    <div id="area-lista">
+      <div class="empty-state">Carregando...</div>
+    </div>
+  </main>
+
+</div>
+
+<!-- Modal de cadastro/edição de cliente -->
+<div class="modal-overlay form-modal" id="modal-cliente" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2 id="modal-titulo">Novo cliente</h2>
+    </div>
+    <div class="modal-body">
+      <form id="form-cliente">
+        <div class="field">
+          <label for="f-nome">Nome</label>
+          <input type="text" id="f-nome" required>
+        </div>
+        <div class="field">
+          <label for="f-telefone">Telefone</label>
+          <input type="text" id="f-telefone">
+        </div>
+        <div class="field">
+          <label for="f-email">E-mail</label>
+          <input type="email" id="f-email">
+        </div>
+        <div class="field">
+          <label for="f-instagram">Instagram</label>
+          <input type="text" id="f-instagram" placeholder="@usuario">
+        </div>
+        <div class="field">
+          <label for="f-notas">Notas</label>
+          <textarea id="f-notas"></textarea>
+        </div>
+        <div class="status-msg" id="status-cliente"></div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-secondary" id="btn-cancelar">Cancelar</button>
+      <button type="submit" form="form-cliente" id="btn-salvar-cliente">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+
+  // --- Sessão + tenant ---
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  let tenant;
+  try {
+    const profile = await ensureProfileAndTenant(session.user);
+    tenant = profile.tenants;
+    if (!isTenantActiveNow(tenant)) window.location.href = 'login.html';
+    else if (!tenant.onboarding_completo) window.location.href = 'onboarding.html';
+  } catch (err) {
+    console.error(err);
+    window.location.href = 'login.html';
+  }
+
+  document.getElementById('btn-logout').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  // --- Elementos ---
+  const areaLista = document.getElementById('area-lista');
+  const modal = document.getElementById('modal-cliente');
+  const form = document.getElementById('form-cliente');
+  const statusEl = document.getElementById('status-cliente');
+  const modalTitulo = document.getElementById('modal-titulo');
+
+  let editandoId = null;
+
+  function abrirModal(cliente = null) {
+    editandoId = cliente ? cliente.id : null;
+    modalTitulo.textContent = cliente ? 'Editar cliente' : 'Novo cliente';
+    document.getElementById('f-nome').value = cliente?.nome || '';
+    document.getElementById('f-telefone').value = cliente?.telefone || '';
+    document.getElementById('f-email').value = cliente?.email || '';
+    document.getElementById('f-instagram').value = cliente?.instagram || '';
+    document.getElementById('f-notas').value = cliente?.notas || '';
+    statusEl.textContent = '';
+    statusEl.className = 'status-msg';
+    modal.style.display = 'flex';
+  }
+
+  function fecharModal() { modal.style.display = 'none'; }
+
+  document.getElementById('btn-novo').addEventListener('click', () => abrirModal());
+  document.getElementById('btn-cancelar').addEventListener('click', fecharModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) fecharModal(); });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nome = document.getElementById('f-nome').value.trim();
+    if (!nome) {
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Informe o nome do cliente.';
+      return;
+    }
+
+    const payload = {
+      nome,
+      telefone: document.getElementById('f-telefone').value.trim() || null,
+      email: document.getElementById('f-email').value.trim() || null,
+      instagram: document.getElementById('f-instagram').value.trim() || null,
+      notas: document.getElementById('f-notas').value.trim() || null,
+    };
+
+    let error;
+    if (editandoId) {
+      ({ error } = await supabase.from('clients').update(payload).eq('id', editandoId));
+    } else {
+      ({ error } = await supabase.from('clients').insert({ ...payload, tenant_id: tenant.id }));
+    }
+
+    if (error) {
+      console.error(error);
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Não foi possível salvar. Tente novamente.';
+      return;
+    }
+
+    fecharModal();
+    carregarClientes();
+  });
+
+  async function excluirCliente(id, nJobs) {
+    const msg = nJobs > 0
+      ? `Este cliente tem ${nJobs} trabalho(s) vinculado(s), que também serão excluídos. Continuar?`
+      : 'Excluir este cliente?';
+    if (!confirm(msg)) return;
+
+    const { error } = await supabase.from('clients').delete().eq('id', id);
+    if (error) {
+      console.error(error);
+      alert('Não foi possível excluir o cliente.');
+      return;
+    }
+    carregarClientes();
+  }
+
+  async function carregarClientes() {
+    const [{ data: clients, error }, { data: jobs }] = await Promise.all([
+      supabase.from('clients').select('*').order('nome', { ascending: true }),
+      supabase.from('jobs').select('id, client_id')
+    ]);
+
+    if (error) {
+      console.error(error);
+      areaLista.innerHTML = `<div class="empty-state">Não foi possível carregar os clientes.</div>`;
+      return;
+    }
+
+    if (!clients || clients.length === 0) {
+      areaLista.innerHTML = `<div class="empty-state">Nenhum cliente ainda. Cadastre o primeiro para começar.</div>`;
+      return;
+    }
+
+    const jobCountByClient = {};
+    (jobs || []).forEach(j => {
+      if (j.client_id) jobCountByClient[j.client_id] = (jobCountByClient[j.client_id] || 0) + 1;
+    });
+
+    const linhas = clients.map(c => {
+      const contato = [c.telefone, c.email].filter(Boolean).join(' · ') || '—';
+      const insta = c.instagram ? '@' + c.instagram.replace('@', '') : '—';
+      const nJobs = jobCountByClient[c.id] || 0;
+      return `
+        <tr data-id="${c.id}">
+          <td>${escapeHtml(c.nome)}</td>
+          <td>${escapeHtml(contato)}</td>
+          <td>${escapeHtml(insta)}</td>
+          <td>${nJobs}</td>
+          <td class="col-actions">
+            <button class="btn-link edit" data-action="editar" data-id="${c.id}">Editar</button>
+            <button class="btn-link danger" data-action="excluir" data-id="${c.id}" data-jobs="${nJobs}">Excluir</button>
+          </td>
+        </tr>`;
+    }).join('');
+
+    areaLista.innerHTML = `
+      <div class="list-card">
+        <table>
+          <thead>
+            <tr><th>Nome</th><th>Contato</th><th>Instagram</th><th>Trabalhos</th><th></th></tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </div>
+    `;
+
+    areaLista.querySelectorAll('[data-action="editar"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const cliente = clients.find(c => c.id === btn.dataset.id);
+        abrirModal(cliente);
+      });
+    });
+
+    areaLista.querySelectorAll('[data-action="excluir"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        excluirCliente(btn.dataset.id, parseInt(btn.dataset.jobs, 10));
+      });
+    });
+
+    areaLista.querySelectorAll('tbody tr').forEach(tr => {
+      tr.addEventListener('click', () => {
+        const cliente = clients.find(c => c.id === tr.dataset.id);
+        abrirModal(cliente);
+      });
+    });
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  carregarClientes();
+</script>
+
+</body>
+</html>

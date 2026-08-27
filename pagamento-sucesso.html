@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pagamento confirmado — StudioFlow</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=3">
+</head>
+<body>
+
+<div class="frame">
+  <div class="mark">
+    <img src="assets/logo.png" alt="StudioFlow" class="icon">
+    <div class="wordmark">Studio<span>Flow</span></div>
+  </div>
+
+  <div class="card">
+    <h1>Pagamento recebido!</h1>
+    <p class="lead">Estamos confirmando com o Asaas — isso costuma levar só alguns segundos. Assim que confirmar, seu acesso libera automaticamente.</p>
+    <div class="status-msg status-ok" id="status" style="display:block">Verificando...</div>
+    <button type="button" id="btn-continuar" style="margin-top:14px;">Continuar</button>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  const statusEl = document.getElementById('status');
+
+  async function checar() {
+    try {
+      const profile = await ensureProfileAndTenant(session.user);
+      const tenant = profile.tenants;
+      if (isTenantActiveNow(tenant)) {
+        statusEl.textContent = 'Confirmado! Redirecionando...';
+        setTimeout(() => {
+          window.location.href = tenant.onboarding_completo ? 'dashboard.html' : 'onboarding.html';
+        }, 900);
+        return true;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    return false;
+  }
+
+  let tentativas = 0;
+  const intervalo = setInterval(async () => {
+    tentativas++;
+    const ok = await checar();
+    if (ok || tentativas >= 20) {
+      clearInterval(intervalo);
+      if (!ok) statusEl.textContent = 'Ainda processando — pode continuar e tentar entrar de novo em instantes.';
+    }
+  }, 3000);
+
+  checar();
+
+  document.getElementById('btn-continuar').addEventListener('click', () => {
+    window.location.href = 'login.html';
+  });
+</script>
+
+</body>
+</html>

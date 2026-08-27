@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modelos de Pacote — StudioFlow</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+</head>
+<body class="app">
+<script type="module" src="js/mobile-nav.js?v=1"></script>
+<script type="module" src="js/search.js?v=1"></script>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="mark"><img src="assets/logo.png" alt="StudioFlow" class="icon"><div class="wordmark">Studio<span>Flow</span></div></div>
+    <div class="tagline">Gestão para criativos</div>
+    <nav>
+      <a href="dashboard.html" class="nav-item">Dashboard</a>
+      <a href="clientes.html" class="nav-item">Clientes</a>
+      <a href="orcamentos.html" class="nav-item">Orçamentos</a>
+      <a href="pipeline.html" class="nav-item">Pipeline</a>
+      <a href="agenda.html" class="nav-item">Agenda</a>
+      <a href="entregas.html" class="nav-item">Entregas</a>
+      <a href="financeiro.html" class="nav-item">Financeiro</a>
+      <a href="conteudo.html" class="nav-item">Conteúdo</a>
+      <a href="freelancer.html" class="nav-item">Freelancer</a>
+      <a href="anotacoes.html" class="nav-item">Anotações</a>
+      <a href="tarefas.html" class="nav-item">Tarefas</a>
+      <a href="modelos.html" class="nav-item active">Modelos de Pacote</a>
+    </nav>
+    <div class="logout">
+      <a href="configuracoes.html" class="nav-item">Configurações</a>
+      <a href="#" class="nav-item" id="btn-logout">Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1 style="font-size:26px;font-weight:800;text-transform:uppercase;margin:0;">Modelos de Pacote</h1>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin:4px 0 0;">Pacotes prontos que você pode escolher ao montar um orçamento novo.</p>
+      </div>
+      <button class="btn-primary" id="btn-novo">+ Novo modelo</button>
+    </div>
+    <div id="area-lista"><div class="empty-state">Carregando...</div></div>
+  </main>
+</div>
+
+<div class="modal-overlay form-modal job-modal" id="modal-modelo" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h2 id="modal-titulo-modelo">Novo modelo de pacote</h2></div>
+    <div class="modal-body">
+      <form id="form-modelo">
+        <div class="field">
+          <label for="m-nome">Nome do modelo</label>
+          <input type="text" id="m-nome" required>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="m-valor">Valor R$</label>
+            <input type="text" id="m-valor" placeholder="0,00">
+          </div>
+          <div class="field">
+            <label for="m-tempo">Tempo de captação</label>
+            <input type="text" id="m-tempo">
+          </div>
+        </div>
+        <div class="pkg-toggle" style="margin:4px 0 12px;">
+          <label><input type="checkbox" id="m-is-foto" checked> Fotografia</label>
+          <label><input type="checkbox" id="m-is-video"> Filmagem</label>
+        </div>
+        <div class="field-row">
+          <div class="field pkg-cond-foto">
+            <label for="m-qtd">Qtd. de fotos</label>
+            <input type="text" id="m-qtd">
+          </div>
+          <div class="field pkg-cond-video">
+            <label for="m-video">Duração do vídeo</label>
+            <input type="text" id="m-video">
+          </div>
+        </div>
+        <div class="field">
+          <label for="m-itens">Itens inclusos / observações (um por linha)</label>
+          <textarea id="m-itens" style="min-height:100px"></textarea>
+        </div>
+        <div class="status-msg" id="status-modelo"></div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-danger" id="btn-excluir-modelo" style="display:none">Excluir</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn-secondary" id="btn-cancelar-modelo">Cancelar</button>
+      <button type="submit" form="form-modelo" id="btn-salvar-modelo">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+  import { parseMoney, fmtMoney } from './js/utils.js?v=5';
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+  let tenant;
+  try {
+    const profile = await ensureProfileAndTenant(session.user);
+    tenant = profile.tenants;
+    if (!isTenantActiveNow(tenant)) window.location.href = 'login.html';
+    else if (!tenant.onboarding_completo) window.location.href = 'onboarding.html';
+  } catch (err) { console.error(err); window.location.href = 'login.html'; }
+
+  document.getElementById('btn-logout').addEventListener('click', async (e) => {
+    e.preventDefault(); await supabase.auth.signOut(); window.location.href = 'login.html';
+  });
+
+  function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+  const areaLista = document.getElementById('area-lista');
+  const modal = document.getElementById('modal-modelo');
+  const statusEl = document.getElementById('status-modelo');
+  let editandoId = null;
+
+  const chkFoto = document.getElementById('m-is-foto');
+  const chkVideo = document.getElementById('m-is-video');
+  function atualizarToggle() {
+    document.querySelector('.pkg-cond-foto').style.display = chkFoto.checked ? '' : 'none';
+    document.querySelector('.pkg-cond-video').style.display = chkVideo.checked ? '' : 'none';
+  }
+  chkFoto.addEventListener('change', atualizarToggle);
+  chkVideo.addEventListener('change', atualizarToggle);
+
+  async function carregarLista() {
+    const { data: modelos, error } = await supabase.from('modelos_pacote').select('*').order('nome');
+    if (error) { console.error(error); areaLista.innerHTML = `<div class="empty-state">Não foi possível carregar.</div>`; return; }
+    if (!modelos || !modelos.length) {
+      areaLista.innerHTML = `<div class="empty-state">Nenhum modelo salvo ainda. Crie os pacotes que você mais usa aqui, uma vez, e reaproveite em cada orçamento novo.</div>`;
+      return;
+    }
+
+    const linhas = modelos.map(m => {
+      const tipo = [m.is_foto ? 'Foto' : null, m.is_video ? 'Vídeo' : null].filter(Boolean).join(' + ') || '—';
+      return `
+        <tr data-id="${m.id}">
+          <td>${escapeHtml(m.nome)}</td>
+          <td>${tipo}</td>
+          <td>${fmtMoney(m.valor)}</td>
+        </tr>`;
+    }).join('');
+
+    areaLista.innerHTML = `
+      <div class="list-card">
+        <table><thead><tr><th>Nome</th><th>Tipo</th><th>Valor</th></tr></thead><tbody>${linhas}</tbody></table>
+      </div>`;
+
+    areaLista.querySelectorAll('tbody tr').forEach(tr => {
+      tr.addEventListener('click', () => abrirModal(tr.dataset.id));
+    });
+  }
+
+  async function abrirModal(id = null) {
+    editandoId = id;
+    statusEl.textContent = ''; statusEl.className = 'status-msg';
+    document.getElementById('modal-titulo-modelo').textContent = id ? 'Editar modelo de pacote' : 'Novo modelo de pacote';
+    document.getElementById('btn-excluir-modelo').style.display = id ? '' : 'none';
+
+    if (id) {
+      const { data: m } = await supabase.from('modelos_pacote').select('*').eq('id', id).single();
+      document.getElementById('m-nome').value = m.nome || '';
+      document.getElementById('m-valor').value = m.valor ? String(m.valor).replace('.', ',') : '';
+      document.getElementById('m-tempo').value = m.tempo || '';
+      document.getElementById('m-qtd').value = m.qtd_fotos || '';
+      document.getElementById('m-video').value = m.duracao_video || '';
+      document.getElementById('m-itens').value = m.itens || '';
+      chkFoto.checked = m.is_foto !== false;
+      chkVideo.checked = !!m.is_video;
+    } else {
+      document.getElementById('m-nome').value = '';
+      document.getElementById('m-valor').value = '';
+      document.getElementById('m-tempo').value = '';
+      document.getElementById('m-qtd').value = '';
+      document.getElementById('m-video').value = '';
+      document.getElementById('m-itens').value = '';
+      chkFoto.checked = true;
+      chkVideo.checked = false;
+    }
+    atualizarToggle();
+    modal.style.display = 'flex';
+  }
+
+  function fecharModal() { modal.style.display = 'none'; }
+
+  document.getElementById('btn-novo').addEventListener('click', () => abrirModal(null));
+  document.getElementById('btn-cancelar-modelo').addEventListener('click', fecharModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) fecharModal(); });
+
+  document.getElementById('form-modelo').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nome = document.getElementById('m-nome').value.trim();
+    if (!nome) { statusEl.className = 'status-msg status-erro'; statusEl.textContent = 'Dê um nome para o modelo.'; return; }
+
+    const payload = {
+      nome,
+      valor: parseMoney(document.getElementById('m-valor').value),
+      tempo: document.getElementById('m-tempo').value.trim() || null,
+      qtd_fotos: document.getElementById('m-qtd').value.trim() || null,
+      duracao_video: document.getElementById('m-video').value.trim() || null,
+      is_foto: chkFoto.checked,
+      is_video: chkVideo.checked,
+      itens: document.getElementById('m-itens').value.trim() || null,
+    };
+
+    let error;
+    if (editandoId) {
+      ({ error } = await supabase.from('modelos_pacote').update(payload).eq('id', editandoId));
+    } else {
+      ({ error } = await supabase.from('modelos_pacote').insert({ ...payload, tenant_id: tenant.id }));
+    }
+    if (error) { console.error(error); statusEl.className = 'status-msg status-erro'; statusEl.textContent = 'Não foi possível salvar.'; return; }
+    fecharModal();
+    carregarLista();
+  });
+
+  document.getElementById('btn-excluir-modelo').addEventListener('click', async () => {
+    if (!editandoId || !confirm('Excluir este modelo de pacote?')) return;
+    await supabase.from('modelos_pacote').delete().eq('id', editandoId);
+    fecharModal();
+    carregarLista();
+  });
+
+  carregarLista();
+</script>
+</body>
+</html>

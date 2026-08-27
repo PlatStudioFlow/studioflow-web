@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Configure seu estúdio — StudioFlow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="assets/logo-small.png">
+<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+<style>
+  .frame { max-width: 460px; }
+  .logo-drop {
+    border: 1.5px dashed var(--line);
+    border-radius: 6px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    background: var(--bg);
+    transition: border-color 0.15s ease;
+  }
+  .logo-drop:hover { border-color: var(--blue); }
+  .logo-drop img { max-width: 140px; max-height: 90px; display: block; margin: 0 auto 10px; }
+  .logo-drop .hint { font-size: 13px; color: var(--ink-soft); }
+  .logo-drop input[type="file"] { display: none; }
+</style>
+</head>
+<body>
+
+<div class="frame">
+  <div class="mark">
+    <img src="assets/logo.png" alt="StudioFlow" class="icon">
+    <div class="wordmark">Studio<span>Flow</span></div>
+  </div>
+
+  <div class="card">
+    <h1>Configure seu estúdio</h1>
+    <p class="lead">Essas informações aparecem no cabeçalho dos seus orçamentos em PDF. Você pode alterá-las depois nas configurações.</p>
+
+    <form id="form-onboarding">
+      <div class="field">
+        <label for="business_name">Nome do estúdio</label>
+        <input type="text" id="business_name" required>
+      </div>
+
+      <div class="field">
+        <label for="contact_email">E-mail de contato</label>
+        <input type="email" id="contact_email" required>
+      </div>
+
+      <div class="field">
+        <label for="contact_phone">Telefone / WhatsApp</label>
+        <input type="text" id="contact_phone" placeholder="(24) 99999-9999">
+      </div>
+
+      <div class="field">
+        <label for="instagram">Instagram</label>
+        <input type="text" id="instagram" placeholder="@seu.estudio">
+      </div>
+
+      <div class="field">
+        <label>Logo (PNG)</label>
+        <label class="logo-drop" id="logo-drop">
+          <img id="logo-preview" style="display:none">
+          <div class="hint" id="logo-hint">Clique para escolher um arquivo PNG</div>
+          <input type="file" id="logo-file" accept="image/png">
+        </label>
+      </div>
+
+      <button type="submit" id="btn-submit">Salvar e continuar</button>
+      <div class="status-msg" id="status"></div>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant } from './js/auth.js?v=5';
+
+  const form = document.getElementById('form-onboarding');
+  const statusEl = document.getElementById('status');
+  const btn = document.getElementById('btn-submit');
+  const fileInput = document.getElementById('logo-file');
+  const preview = document.getElementById('logo-preview');
+  const hint = document.getElementById('logo-hint');
+
+  let currentUser = null;
+  let currentTenant = null;
+
+  // --- Carrega sessão e dados do tenant ao abrir a página ---
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    window.location.href = 'login.html';
+  } else {
+    currentUser = session.user;
+    try {
+      const profile = await ensureProfileAndTenant(currentUser);
+      currentTenant = profile.tenants;
+
+      if (currentTenant.status !== 'ativo') {
+        window.location.href = 'login.html';
+      } else if (currentTenant.onboarding_completo) {
+        window.location.href = 'dashboard.html';
+      } else {
+        // Pré-preenche com o que já existe
+        document.getElementById('business_name').value = currentTenant.business_name || '';
+        document.getElementById('contact_email').value = currentTenant.contact_email || currentUser.email || '';
+        document.getElementById('contact_phone').value = currentTenant.contact_phone || '';
+        document.getElementById('instagram').value = currentTenant.instagram || '';
+      }
+    } catch (err) {
+      console.error(err);
+      window.location.href = 'login.html';
+    }
+  }
+
+  // --- Preview do logo escolhido ---
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    if (file.type !== 'image/png') {
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'O logo precisa ser um arquivo PNG.';
+      fileInput.value = '';
+      return;
+    }
+    statusEl.textContent = '';
+    statusEl.className = 'status-msg';
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+      hint.textContent = file.name;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // --- Salvar configuração ---
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    btn.disabled = true;
+    statusEl.className = 'status-msg';
+    statusEl.textContent = 'Salvando...';
+
+    const business_name = document.getElementById('business_name').value.trim();
+    const contact_email = document.getElementById('contact_email').value.trim();
+    const contact_phone = document.getElementById('contact_phone').value.trim();
+    const instagram = document.getElementById('instagram').value.trim();
+    const file = fileInput.files[0];
+
+    let logo_url = currentTenant.logo_url || null;
+
+    try {
+      if (file) {
+        const path = `${currentTenant.id}/logo.png`;
+        const { error: uploadError } = await supabase.storage
+          .from('logos')
+          .upload(path, file, { upsert: true, contentType: 'image/png' });
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage.from('logos').getPublicUrl(path);
+        logo_url = publicUrlData.publicUrl;
+      }
+
+      const { error: updateError } = await supabase
+        .from('tenants')
+        .update({
+          business_name,
+          contact_email,
+          contact_phone,
+          instagram,
+          logo_url,
+          onboarding_completo: true
+        })
+        .eq('id', currentTenant.id);
+
+      if (updateError) throw updateError;
+
+      statusEl.className = 'status-msg status-ok';
+      statusEl.textContent = 'Configuração salva! Redirecionando...';
+      setTimeout(() => window.location.href = 'dashboard.html', 900);
+
+    } catch (err) {
+      console.error(err);
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Não foi possível salvar. Tente novamente.';
+      btn.disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>

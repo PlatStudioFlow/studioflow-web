@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entrar — StudioFlow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="assets/logo-small.png">
+<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+</head>
+<body>
+
+<div class="frame">
+  <div class="mark">
+    <img src="assets/logo.png" alt="StudioFlow" class="icon">
+    <div class="wordmark">Studio<span>Flow</span></div>
+  </div>
+
+  <div class="card">
+    <h1>Entrar</h1>
+    <p class="lead">Acesse sua conta para gerenciar orçamentos, agenda e clientes.</p>
+
+    <form id="form-login">
+      <div class="field">
+        <label for="email">E-mail</label>
+        <input type="email" id="email" required placeholder="voce@email.com">
+      </div>
+
+      <div class="field">
+        <label for="password">Senha</label>
+        <input type="password" id="password" required placeholder="Sua senha">
+      </div>
+
+      <button type="submit" id="btn-submit">Entrar</button>
+      <div class="status-msg" id="status"></div>
+    </form>
+
+    <div class="switch">Ainda não tem conta? <a href="cadastro.html">Criar conta</a></div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, handleTenantStatus } from './js/auth.js?v=5';
+
+  const form = document.getElementById('form-login');
+  const statusEl = document.getElementById('status');
+  const btn = document.getElementById('btn-submit');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    btn.disabled = true;
+    statusEl.className = 'status-msg';
+    statusEl.textContent = '';
+
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'E-mail ou senha incorretos.';
+      btn.disabled = false;
+      return;
+    }
+
+    try {
+      const profile = await ensureProfileAndTenant(data.user);
+      const tenant = profile.tenants;
+
+      // Admin da plataforma não depende do status do próprio tenant —
+      // vai direto pro painel de administração.
+      if (profile.role === 'admin_studioflow') {
+        window.location.href = 'admin.html';
+        return;
+      }
+
+      if (tenant.status === 'pendente') {
+        window.location.href = 'pagamento.html';
+        return;
+      }
+
+      const podeEntrar = handleTenantStatus(tenant, statusEl);
+      if (!podeEntrar) {
+        btn.disabled = false;
+        return;
+      }
+
+      // Ativo -> segue para onboarding (se necessário) ou dashboard.
+      window.location.href = tenant.onboarding_completo ? 'dashboard.html' : 'onboarding.html';
+
+    } catch (err) {
+      console.error(err);
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Erro ao carregar sua conta. Tente novamente em instantes.';
+      btn.disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>

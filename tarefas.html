@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tarefas — StudioFlow</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+</head>
+<body class="app">
+<script type="module" src="js/mobile-nav.js?v=1"></script>
+<script type="module" src="js/search.js?v=1"></script>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="mark"><img src="assets/logo.png" alt="StudioFlow" class="icon"><div class="wordmark">Studio<span>Flow</span></div></div>
+    <div class="tagline">Gestão para criativos</div>
+    <nav>
+      <a href="dashboard.html" class="nav-item">Dashboard</a>
+      <a href="clientes.html" class="nav-item">Clientes</a>
+      <a href="orcamentos.html" class="nav-item">Orçamentos</a>
+      <a href="pipeline.html" class="nav-item">Pipeline</a>
+      <a href="agenda.html" class="nav-item">Agenda</a>
+      <a href="entregas.html" class="nav-item">Entregas</a>
+      <a href="financeiro.html" class="nav-item">Financeiro</a>
+      <a href="conteudo.html" class="nav-item">Conteúdo</a>
+      <a href="freelancer.html" class="nav-item">Freelancer</a>
+      <a href="anotacoes.html" class="nav-item">Anotações</a>
+      <a href="tarefas.html" class="nav-item active">Tarefas</a>
+      <a href="modelos.html" class="nav-item">Modelos de Pacote</a>
+    </nav>
+    <div class="logout">
+      <a href="configuracoes.html" class="nav-item">Configurações</a>
+      <a href="#" class="nav-item" id="btn-logout">Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1 style="font-size:26px;font-weight:800;text-transform:uppercase;margin:0;">Tarefas</h1>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin:4px 0 0;">Toda vez que o programa abrir, o que estiver vencendo essa semana aparece num lembrete.</p>
+      </div>
+      <button class="btn-primary" id="btn-novo">+ Nova tarefa</button>
+    </div>
+
+    <div class="section-block">
+      <div class="section-title-row"><h2>Pendentes</h2><span class="count" id="count-pendentes"></span></div>
+      <div id="area-pendentes"><div class="empty-state">Carregando...</div></div>
+    </div>
+    <div class="section-block" id="bloco-concluidas" style="display:none">
+      <div class="section-title-row"><h2>Concluídas</h2><span class="count" id="count-concluidas"></span></div>
+      <div id="area-concluidas"></div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay form-modal" id="modal-tarefa" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h2 id="modal-titulo-tarefa">Nova tarefa</h2></div>
+    <div class="modal-body">
+      <form id="form-tarefa">
+        <div class="field">
+          <label for="t-desc">Descrição</label>
+          <textarea id="t-desc" required></textarea>
+        </div>
+        <div class="field">
+          <label for="t-prazo">Prazo de vencimento</label>
+          <input type="date" id="t-prazo">
+          <small>opcional</small>
+        </div>
+        <div class="status-msg" id="status-tarefa"></div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-danger" id="btn-excluir-tarefa" style="display:none">Excluir</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn-secondary" id="btn-cancelar-tarefa">Cancelar</button>
+      <button type="submit" form="form-tarefa" id="btn-salvar-tarefa">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+  import { fmtDate } from './js/utils.js?v=5';
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+  let tenant;
+  try {
+    const profile = await ensureProfileAndTenant(session.user);
+    tenant = profile.tenants;
+    if (!isTenantActiveNow(tenant)) window.location.href = 'login.html';
+    else if (!tenant.onboarding_completo) window.location.href = 'onboarding.html';
+  } catch (err) { console.error(err); window.location.href = 'login.html'; }
+
+  document.getElementById('btn-logout').addEventListener('click', async (e) => {
+    e.preventDefault(); await supabase.auth.signOut(); window.location.href = 'login.html';
+  });
+
+  function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+  function diasAte(isoDate) {
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const alvo = new Date(isoDate + 'T00:00:00');
+    return Math.round((alvo - hoje) / (1000 * 60 * 60 * 24));
+  }
+
+  const modal = document.getElementById('modal-tarefa');
+  const statusEl = document.getElementById('status-tarefa');
+  let editandoId = null;
+
+  function renderLista(container, tarefas, concluida) {
+    if (!tarefas.length) {
+      container.innerHTML = `<div class="list-card"><div style="padding:16px;color:var(--ink-faint);font-size:13.5px;">Nada por aqui.</div></div>`;
+      return;
+    }
+    container.innerHTML = `<div class="list-card">${tarefas.map(t => {
+      let prazoHtml = '';
+      if (t.prazo) {
+        if (concluida) {
+          prazoHtml = `<span class="prazo done">${fmtDate(t.prazo)}</span>`;
+        } else {
+          const dias = diasAte(t.prazo);
+          if (dias < 0) prazoHtml = `<span class="prazo atrasada">atrasada · ${fmtDate(t.prazo)}</span>`;
+          else if (dias === 0) prazoHtml = `<span class="prazo hoje">vence hoje</span>`;
+          else prazoHtml = `<span class="prazo futuro">${fmtDate(t.prazo)} · em ${dias} dias</span>`;
+        }
+      }
+      return `
+        <div class="tarefa-row ${concluida ? 'concluida' : ''}" data-id="${t.id}">
+          <input type="checkbox" ${concluida ? 'checked' : ''}>
+          <span class="desc" data-action="editar">${escapeHtml(t.descricao)}</span>
+          ${prazoHtml}
+        </div>`;
+    }).join('')}</div>`;
+
+    container.querySelectorAll('.tarefa-row input[type="checkbox"]').forEach(chk => {
+      chk.addEventListener('change', async (e) => {
+        const row = e.target.closest('.tarefa-row');
+        await supabase.from('tarefas').update({ concluida: e.target.checked }).eq('id', row.dataset.id);
+        carregarTarefas();
+      });
+    });
+    container.querySelectorAll('.desc[data-action="editar"]').forEach(el => {
+      el.addEventListener('click', () => abrirModal(el.closest('.tarefa-row').dataset.id));
+    });
+  }
+
+  async function carregarTarefas() {
+    const { data: tarefas, error } = await supabase.from('tarefas').select('*').order('prazo', { ascending: true, nullsFirst: false });
+    if (error) { console.error(error); return; }
+
+    const pendentes = (tarefas || []).filter(t => !t.concluida);
+    const concluidas = (tarefas || []).filter(t => t.concluida);
+
+    document.getElementById('count-pendentes').textContent = pendentes.length;
+    renderLista(document.getElementById('area-pendentes'), pendentes, false);
+
+    if (concluidas.length) {
+      document.getElementById('bloco-concluidas').style.display = '';
+      document.getElementById('count-concluidas').textContent = concluidas.length;
+      renderLista(document.getElementById('area-concluidas'), concluidas, true);
+    } else {
+      document.getElementById('bloco-concluidas').style.display = 'none';
+    }
+  }
+
+  async function abrirModal(id = null) {
+    editandoId = id;
+    statusEl.textContent = ''; statusEl.className = 'status-msg';
+    document.getElementById('modal-titulo-tarefa').textContent = id ? 'Editar tarefa' : 'Nova tarefa';
+    document.getElementById('btn-excluir-tarefa').style.display = id ? '' : 'none';
+
+    if (id) {
+      const { data: t } = await supabase.from('tarefas').select('*').eq('id', id).single();
+      document.getElementById('t-desc').value = t.descricao || '';
+      document.getElementById('t-prazo').value = t.prazo || '';
+    } else {
+      document.getElementById('t-desc').value = '';
+      document.getElementById('t-prazo').value = '';
+    }
+    modal.style.display = 'flex';
+  }
+
+  function fecharModal() { modal.style.display = 'none'; }
+
+  document.getElementById('btn-novo').addEventListener('click', () => abrirModal(null));
+  document.getElementById('btn-cancelar-tarefa').addEventListener('click', fecharModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) fecharModal(); });
+
+  document.getElementById('form-tarefa').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const descricao = document.getElementById('t-desc').value.trim();
+    if (!descricao) { statusEl.className = 'status-msg status-erro'; statusEl.textContent = 'Descreva a tarefa.'; return; }
+    const payload = { descricao, prazo: document.getElementById('t-prazo').value || null };
+
+    let error;
+    if (editandoId) {
+      ({ error } = await supabase.from('tarefas').update(payload).eq('id', editandoId));
+    } else {
+      ({ error } = await supabase.from('tarefas').insert({ ...payload, tenant_id: tenant.id }));
+    }
+    if (error) { console.error(error); statusEl.className = 'status-msg status-erro'; statusEl.textContent = 'Não foi possível salvar.'; return; }
+    fecharModal();
+    carregarTarefas();
+  });
+
+  document.getElementById('btn-excluir-tarefa').addEventListener('click', async () => {
+    if (!editandoId || !confirm('Excluir esta tarefa?')) return;
+    await supabase.from('tarefas').delete().eq('id', editandoId);
+    fecharModal();
+    carregarTarefas();
+  });
+
+  carregarTarefas();
+</script>
+</body>
+</html>

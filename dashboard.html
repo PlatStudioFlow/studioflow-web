@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — StudioFlow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="assets/logo-small.png">
+<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+</head>
+<body class="app">
+<script type="module" src="js/mobile-nav.js?v=1"></script>
+<script type="module" src="js/search.js?v=1"></script>
+
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="mark">
+      <img src="assets/logo.png" alt="StudioFlow" class="icon">
+      <div class="wordmark">Studio<span>Flow</span></div>
+    </div>
+    <div class="tagline">Gestão para criativos</div>
+
+    <nav>
+      <a href="dashboard.html" class="nav-item active">Dashboard</a>
+      <a href="clientes.html" class="nav-item">Clientes</a>
+      <a href="orcamentos.html" class="nav-item">Orçamentos</a>
+      <a href="pipeline.html" class="nav-item">Pipeline</a>
+      <a href="agenda.html" class="nav-item">Agenda</a>
+      <a href="entregas.html" class="nav-item">Entregas</a>
+      <a href="financeiro.html" class="nav-item">Financeiro</a>
+      <a href="conteudo.html" class="nav-item">Conteúdo</a>
+      <a href="freelancer.html" class="nav-item">Freelancer</a>
+      <a href="anotacoes.html" class="nav-item">Anotações</a>
+      <a href="tarefas.html" class="nav-item">Tarefas</a>
+      <a href="modelos.html" class="nav-item">Modelos de Pacote</a>
+    </nav>
+
+    <div class="logout">
+      <a href="configuracoes.html" class="nav-item">Configurações</a>
+      <a href="#" class="nav-item" id="btn-logout">Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <h1>Dashboard</h1>
+      <div class="today" id="today"></div>
+    </div>
+
+    <div class="stat-grid" id="stat-grid">
+      <div class="stat-card"><div class="num">—</div><div class="label">carregando...</div></div>
+    </div>
+
+    <h2 class="section-title">Pipeline <span class="count" id="pipeline-count"></span></h2>
+    <div class="pipeline-grid" id="pipeline-grid"></div>
+
+    <h2 class="section-title">Próximos eventos</h2>
+    <table class="data-table">
+      <thead>
+        <tr><th>Cliente</th><th>Tipo</th><th>Data</th></tr>
+      </thead>
+      <tbody id="eventos-body">
+        <tr><td colspan="3" style="color:var(--ink-soft)">Carregando...</td></tr>
+      </tbody>
+    </table>
+  </main>
+
+</div>
+
+<!-- Popup "Essa semana" -->
+<div class="modal-overlay" id="modal-semana" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head">
+      <img src="assets/logo.png" alt="StudioFlow" class="icon">
+      <h2>Essa semana</h2>
+      <p class="modal-sub">Resumo do que está vencendo ou chegando perto.</p>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <!-- preenchido via JS -->
+    </div>
+    <div class="modal-foot">
+      <button id="btn-fechar-modal">Entendi</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+  import { STAGE_LABELS as STAGE_LABELS_LOCAL, fmtMoney } from './js/utils.js?v=5';
+
+  const DIAS = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+  const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
+  function formatarDataLonga(d) {
+    return `${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]}`;
+  }
+
+  function formatarDataCurta(isoDate) {
+    const [y, m, d] = isoDate.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  document.getElementById('today').textContent = formatarDataLonga(new Date());
+
+  // --- Sessão + tenant ---
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  let tenant;
+  try {
+    const profile = await ensureProfileAndTenant(session.user);
+    tenant = profile.tenants;
+    if (!isTenantActiveNow(tenant)) { window.location.href = 'login.html'; }
+    else if (!tenant.onboarding_completo) { window.location.href = 'onboarding.html'; }
+  } catch (err) {
+    console.error(err);
+    window.location.href = 'login.html';
+  }
+
+  document.getElementById('btn-logout').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  // --- Carrega dados ---
+  const hoje = new Date();
+  const daqui7dias = new Date(hoje.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const hojeISO = hoje.toISOString().slice(0, 10);
+  const daqui7ISO = daqui7dias.toISOString().slice(0, 10);
+
+  const [{ data: jobs }, { data: clients }, { data: freelancers }, { data: eventosAvulsos }, { data: tarefasPendentes }, { data: trabalhosAbertos }] = await Promise.all([
+    supabase.from('jobs').select('*, clients(nome)').order('data_evento', { ascending: true }),
+    supabase.from('clients').select('id'),
+    supabase.from('freelancers').select('id, nome'),
+    supabase.from('eventos').select('*').order('data', { ascending: true }),
+    supabase.from('tarefas').select('*').eq('concluida', false).not('prazo', 'is', null).lte('prazo', daqui7ISO).order('prazo', { ascending: true }),
+    supabase.from('freelance_trabalhos').select('freelancer_id, valor').eq('pago', false)
+  ]);
+
+  const todosJobs = jobs || [];
+  const todosAvulsos = eventosAvulsos || [];
+
+  // "Confirmado" = já saiu da etapa de orçamento (mesma regra da Agenda) —
+  // enquanto está em "contrato" (orçamento), ainda não deve aparecer como
+  // evento marcado, só depois de confirmado (Evento/Entrega).
+  const jobsComData = todosJobs.filter(j => j.data_evento && j.stage !== 'contrato');
+
+  // Formato comum entre trabalhos confirmados e eventos avulsos, pra
+  // aparecerem juntos nos cards, na tabela e no popup semanal.
+  const todosEventos = [
+    ...jobsComData.map(j => ({
+      data: j.data_evento,
+      titulo: j.clients ? j.clients.nome : 'Sem cliente',
+      sub: j.tipo_trabalho || '—',
+      tag: STAGE_LABELS_LOCAL[j.stage] || j.stage,
+      avulso: false,
+    })),
+    ...todosAvulsos.filter(e => e.data).map(e => ({
+      data: e.data,
+      titulo: e.titulo,
+      sub: e.notas || '',
+      tag: 'Avulso',
+      avulso: true,
+    })),
+  ].sort((a, b) => a.data.localeCompare(b.data));
+
+  // --- Cards de resumo ---
+  const eventosEstaSemana = todosEventos.filter(e => e.data >= hojeISO && e.data <= daqui7ISO);
+  const entregasPendentes = todosJobs.filter(j => j.stage === 'entrega');
+  const trabalhosPipeline = todosJobs; // contrato + evento + entrega
+
+  const stats = [
+    { num: eventosEstaSemana.length, label: 'evento(s) esta semana' },
+    { num: entregasPendentes.length, label: 'entregas pendentes' },
+    { num: (clients || []).length, label: 'clientes cadastrados' },
+    { num: trabalhosPipeline.length, label: 'trabalhos no pipeline' },
+    { num: (freelancers || []).length, label: 'freelancer(s) cadastrados' },
+  ];
+
+  document.getElementById('stat-grid').innerHTML = stats.map(s => `
+    <div class="stat-card">
+      <div class="num">${s.num}</div>
+      <div class="label">${s.label}</div>
+    </div>
+  `).join('');
+
+  // --- Pipeline (Orçamento / Evento / Avulsos) ---
+  const contratos = todosJobs.filter(j => j.stage === 'contrato');
+  const eventosPipeline = todosJobs.filter(j => j.stage === 'evento');
+
+  document.getElementById('pipeline-count').textContent = `${trabalhosPipeline.length + todosAvulsos.length} trabalho(s)`;
+
+  function renderColuna(titulo, itens) {
+    const corpo = itens.length
+      ? itens.slice(0, 8).map(j => `
+          <div class="pipeline-item">
+            <div class="client">${j.clients ? j.clients.nome : 'Sem cliente'}</div>
+            <div class="detail">${j.tipo_trabalho || ''}${j.tipo_trabalho && j.data_evento ? ' · ' : ''}${j.data_evento ? formatarDataCurta(j.data_evento) : (j.tipo_trabalho ? '' : 'sem data')}</div>
+          </div>
+        `).join('')
+      : `<div class="pipeline-empty">Nenhum trabalho nessa etapa.</div>`;
+
+    return `
+      <div class="pipeline-col">
+        <div class="col-head"><span>${titulo}</span><span>${itens.length}</span></div>
+        <div class="col-body">${corpo}</div>
+      </div>
+    `;
+  }
+
+  function renderColunaAvulsos(itens) {
+    const corpo = itens.length
+      ? itens.slice(0, 8).map(e => `
+          <div class="pipeline-item">
+            <div class="client">${escapeHtml(e.titulo)}</div>
+            <div class="detail">${e.data ? formatarDataCurta(e.data) : 'sem data'}${e.horario ? ' · ' + e.horario : ''}</div>
+          </div>
+        `).join('')
+      : `<div class="pipeline-empty">Nenhum evento avulso.</div>`;
+
+    return `
+      <div class="pipeline-col">
+        <div class="col-head"><span>Avulsos</span><span>${itens.length}</span></div>
+        <div class="col-body">${corpo}</div>
+      </div>
+    `;
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  document.getElementById('pipeline-grid').innerHTML =
+    renderColuna('Orçamento', contratos) + renderColuna('Evento', eventosPipeline) + renderColunaAvulsos(todosAvulsos);
+
+  // --- Próximos eventos (tabela, unificando trabalhos + avulsos) ---
+  const proximos = todosEventos.filter(e => e.data >= hojeISO).slice(0, 10);
+  document.getElementById('eventos-body').innerHTML = proximos.length
+    ? proximos.map(e => `
+        <tr>
+          <td>${escapeHtml(e.titulo)}${e.avulso ? ' <span style="color:var(--ink-faint);font-size:12px;">(avulso)</span>' : ''}</td>
+          <td>${escapeHtml(e.sub || '—')}</td>
+          <td>${formatarDataCurta(e.data)}</td>
+        </tr>
+      `).join('')
+    : `<tr><td colspan="3" style="color:var(--ink-soft)">Nenhum evento agendado por enquanto.</td></tr>`;
+
+  // --- Popup "Essa semana" (tarefas vencendo + eventos + freelancers em aberto) ---
+  function diasAteFn(isoDate) {
+    const h = new Date(); h.setHours(0,0,0,0);
+    const alvo = new Date(isoDate + 'T00:00:00');
+    return Math.round((alvo - h) / (1000 * 60 * 60 * 24));
+  }
+
+  const totaisFreela = {}, contagensFreela = {};
+  (trabalhosAbertos || []).forEach(t => {
+    totaisFreela[t.freelancer_id] = (totaisFreela[t.freelancer_id] || 0) + parseFloat(t.valor || 0);
+    contagensFreela[t.freelancer_id] = (contagensFreela[t.freelancer_id] || 0) + 1;
+  });
+  const freelasComPendencia = (freelancers || []).filter(f => contagensFreela[f.id]);
+
+  let corpoModal = '';
+
+  const tarefas = tarefasPendentes || [];
+  corpoModal += `<div class="modal-section-label tarefas">Tarefas vencendo (${tarefas.length})</div>`;
+  corpoModal += tarefas.length
+    ? tarefas.map(t => {
+        const dias = diasAteFn(t.prazo);
+        const sufixo = dias < 0 ? 'atrasada' : dias === 0 ? 'vence hoje' : `em ${dias} dias`;
+        return `
+          <div class="modal-item">
+            <div class="title">${escapeHtml(t.descricao)}</div>
+            <div class="meta">${formatarDataCurta(t.prazo)} · ${sufixo}</div>
+          </div>`;
+      }).join('')
+    : `<div class="modal-empty">Nada vencendo essa semana.</div>`;
+
+  corpoModal += `<div class="modal-section-label eventos">Eventos essa semana (${eventosEstaSemana.length})</div>`;
+  corpoModal += eventosEstaSemana.length
+    ? eventosEstaSemana.map(e => `
+        <div class="modal-item">
+          <div class="title">${escapeHtml(e.titulo)} — ${formatarDataCurta(e.data)}</div>
+          <div class="meta">${escapeHtml(e.sub || '')}${e.avulso ? ' · evento avulso' : ''}</div>
+        </div>`).join('')
+    : `<div class="modal-empty">Nenhum evento marcado essa semana.</div>`;
+
+  corpoModal += `<div class="modal-section-label freelancers">Freelancers com pagamento em aberto (${freelasComPendencia.length})</div>`;
+  corpoModal += freelasComPendencia.length
+    ? freelasComPendencia.map(f => `
+        <div class="modal-item">
+          <div class="title">${escapeHtml(f.nome)}</div>
+          <div class="meta">${contagensFreela[f.id]} trabalho(s) · ${fmtMoney(totaisFreela[f.id])}</div>
+        </div>`).join('')
+    : `<div class="modal-empty">Nenhum pagamento em aberto.</div>`;
+
+  document.getElementById('modal-body').innerHTML = corpoModal;
+
+  // Mostra o popup toda vez que essa página carrega (ou seja, a cada login)
+  document.getElementById('modal-semana').style.display = 'flex';
+  document.getElementById('btn-fechar-modal').addEventListener('click', () => {
+    document.getElementById('modal-semana').style.display = 'none';
+  });
+</script>
+
+</body>
+</html>

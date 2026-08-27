@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orçamentos — StudioFlow</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="app">
+<script type="module" src="js/mobile-nav.js?v=1"></script>
+<script type="module" src="js/search.js?v=1"></script>
+
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="mark">
+      <img src="assets/logo.png" alt="StudioFlow" class="icon">
+      <div class="wordmark">Studio<span>Flow</span></div>
+    </div>
+    <div class="tagline">Gestão para criativos</div>
+
+    <nav>
+      <a href="dashboard.html" class="nav-item">Dashboard</a>
+      <a href="clientes.html" class="nav-item">Clientes</a>
+      <a href="orcamentos.html" class="nav-item active">Orçamentos</a>
+      <a href="pipeline.html" class="nav-item">Pipeline</a>
+      <a href="agenda.html" class="nav-item">Agenda</a>
+      <a href="entregas.html" class="nav-item">Entregas</a>
+      <a href="financeiro.html" class="nav-item">Financeiro</a>
+      <a href="conteudo.html" class="nav-item">Conteúdo</a>
+      <a href="freelancer.html" class="nav-item">Freelancer</a>
+      <a href="anotacoes.html" class="nav-item">Anotações</a>
+      <a href="tarefas.html" class="nav-item">Tarefas</a>
+      <a href="modelos.html" class="nav-item">Modelos de Pacote</a>
+    </nav>
+
+    <div class="logout">
+      <a href="configuracoes.html" class="nav-item">Configurações</a>
+      <a href="#" class="nav-item" id="btn-logout">Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <h1 style="font-size:26px;font-weight:800;text-transform:uppercase;margin:0;">Orçamentos</h1>
+      <button class="btn-primary" id="btn-novo">+ Novo orçamento</button>
+    </div>
+
+    <div id="area-lista">
+      <div class="empty-state">Carregando...</div>
+    </div>
+  </main>
+
+</div>
+
+<!-- Modal de trabalho / orçamento -->
+<div class="modal-overlay form-modal job-modal" id="modal-job" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2 id="modal-titulo">Novo trabalho</h2>
+    </div>
+    <div class="modal-body">
+      <form id="form-job">
+        <div class="field-row">
+          <div class="field">
+            <label for="f-cliente">Cliente</label>
+            <select class="select-input" id="f-cliente" required></select>
+          </div>
+          <div class="field">
+            <label for="f-etapa">Etapa</label>
+            <select class="select-input" id="f-etapa">
+              <option value="contrato">Orçamento</option>
+              <option value="evento">Evento</option>
+              <option value="entrega">Entrega</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="f-tipo">Tipo de trabalho</label>
+          <input type="text" id="f-tipo" placeholder="Ex: Cobertura Fotográfica">
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="f-data">Data do evento</label>
+            <input type="date" id="f-data">
+          </div>
+          <div class="field">
+            <label for="f-horario">Horário</label>
+            <input type="text" id="f-horario" placeholder="14:30">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="f-local">Local</label>
+          <input type="text" id="f-local">
+        </div>
+
+        <hr class="job-divider">
+        <div class="job-section-label">Pacotes (valores independentes — não são somados)</div>
+        <div id="pkg-holder"></div>
+        <button type="button" class="link-btn" id="btn-add-pkg">+ adicionar pacote</button>
+
+        <hr class="job-divider">
+        <div class="field-row">
+          <div class="field">
+            <label for="f-prazo">Prazo de entrega (dias úteis)</label>
+            <input type="text" id="f-prazo" value="7">
+          </div>
+          <div class="field">
+            <label for="f-fotos">Fotos aguardando curadoria</label>
+            <input type="text" id="f-fotos" value="0">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="f-notas">Notas</label>
+          <textarea id="f-notas"></textarea>
+        </div>
+
+        <hr class="job-divider">
+        <div class="job-section-label">Termos e condições (impresso no orçamento)</div>
+        <div class="field">
+          <textarea id="f-termos" style="min-height:110px"></textarea>
+        </div>
+
+        <div class="status-msg" id="status-job"></div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-danger" id="btn-excluir-job" style="display:none">Excluir trabalho</button>
+      <button type="button" class="btn-ghost" id="btn-pdf-job">Gerar PDF</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn-secondary" id="btn-cancelar-job">Cancelar</button>
+      <button type="submit" form="form-job" id="btn-salvar-job">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+  import { parseMoney, fmtMoney, fmtDate, STAGE_LABELS, DEFAULT_TERMOS } from './js/utils.js?v=5';
+
+  // --- Sessão + tenant ---
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  let tenant;
+  try {
+    const profile = await ensureProfileAndTenant(session.user);
+    tenant = profile.tenants;
+    if (!isTenantActiveNow(tenant)) window.location.href = 'login.html';
+    else if (!tenant.onboarding_completo) window.location.href = 'onboarding.html';
+  } catch (err) {
+    console.error(err);
+    window.location.href = 'login.html';
+  }
+
+  document.getElementById('btn-logout').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  let clientesCache = [];
+  let editandoId = null;
+  let pkgSeq = 0;
+
+  const modal = document.getElementById('modal-job');
+  const areaLista = document.getElementById('area-lista');
+  const pkgHolder = document.getElementById('pkg-holder');
+  const statusEl = document.getElementById('status-job');
+
+  // --- Lista de orçamentos ---
+  async function carregarLista() {
+    const { data: jobs, error } = await supabase
+      .from('jobs')
+      .select('id, tipo_trabalho, data_evento, stage, clients(nome), packages(id)')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error(error);
+      areaLista.innerHTML = `<div class="empty-state">Não foi possível carregar os orçamentos.</div>`;
+      return;
+    }
+
+    if (!jobs || jobs.length === 0) {
+      areaLista.innerHTML = `<div class="empty-state">Nenhum trabalho cadastrado ainda. Crie um com os pacotes e condições do trabalho.</div>`;
+      return;
+    }
+
+    const linhas = jobs.map(j => `
+      <tr data-id="${j.id}">
+        <td>${j.clients ? escapeHtml(j.clients.nome) : '—'}</td>
+        <td>${escapeHtml(j.tipo_trabalho || '—')}</td>
+        <td>${fmtDate(j.data_evento)}</td>
+        <td style="text-align:center">${(j.packages || []).length}</td>
+        <td>${STAGE_LABELS[j.stage] || j.stage}</td>
+      </tr>
+    `).join('');
+
+    areaLista.innerHTML = `
+      <div class="list-card">
+        <table>
+          <thead><tr><th>Cliente</th><th>Tipo</th><th>Data</th><th>Pacotes</th><th>Etapa</th></tr></thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </div>
+    `;
+
+    areaLista.querySelectorAll('tbody tr').forEach(tr => {
+      tr.addEventListener('click', () => abrirModal(tr.dataset.id));
+    });
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // --- Linhas de pacote ---
+  function addPkgRow(data = {}) {
+    const id = 'pkg' + (++pkgSeq);
+    const isFoto = data.is_foto !== undefined ? data.is_foto : true;
+    const isVideo = data.is_video || false;
+
+    const row = document.createElement('div');
+    row.className = 'pkg-row';
+    row.dataset.pkgId = id;
+    row.innerHTML = `
+      <div class="row1">
+        <input type="text" class="pkg-nome" placeholder="nome do pacote" value="${data.nome ? escapeHtml(data.nome) : ''}">
+        <input type="text" class="pkg-valor" placeholder="valor R$" value="${data.valor ? String(data.valor).replace('.', ',') : ''}">
+        <button type="button" class="pkg-remove" title="Remover pacote">×</button>
+      </div>
+      <div class="pkg-toggle">
+        <label><input type="checkbox" class="pkg-is-foto" ${isFoto ? 'checked' : ''}> Fotografia</label>
+        <label><input type="checkbox" class="pkg-is-video" ${isVideo ? 'checked' : ''}> Filmagem</label>
+      </div>
+      <div class="pkg-row2">
+        <input type="text" class="pkg-tempo" placeholder="tempo de captação" value="${data.tempo ? escapeHtml(data.tempo) : ''}">
+        <input type="text" class="pkg-qtd-fotos pkg-cond-foto" placeholder="qtd. de fotos" value="${data.qtd_fotos ? escapeHtml(data.qtd_fotos) : ''}">
+        <input type="text" class="pkg-duracao-video pkg-cond-video" placeholder="duração do vídeo" value="${data.duracao_video ? escapeHtml(data.duracao_video) : ''}">
+      </div>
+      <div class="pkg-itens-label">Itens inclusos / observações (um por linha)</div>
+      <textarea class="pkg-itens" placeholder="ex: 1 álbum 20x30&#10;100 fotos editadas">${data.itens ? escapeHtml(data.itens) : ''}</textarea>
+      <div class="pkg-preview">À vista: R$ 0,00   ·   12x (+15%): R$ 0,00 — 12x de R$ 0,00</div>
+    `;
+    pkgHolder.appendChild(row);
+
+    const valorInput = row.querySelector('.pkg-valor');
+    const preview = row.querySelector('.pkg-preview');
+    const chkFoto = row.querySelector('.pkg-is-foto');
+    const chkVideo = row.querySelector('.pkg-is-video');
+    const condFoto = row.querySelector('.pkg-cond-foto');
+    const condVideo = row.querySelector('.pkg-cond-video');
+
+    function updatePreview() {
+      const v = parseMoney(valorInput.value);
+      const total12x = v * 1.15;
+      const parcela = total12x / 12;
+      preview.textContent = `À vista: ${fmtMoney(v)}   ·   12x (+15%): ${fmtMoney(total12x)} — 12x de ${fmtMoney(parcela)}`;
+    }
+    function updateToggle() {
+      condFoto.style.display = chkFoto.checked ? '' : 'none';
+      condVideo.style.display = chkVideo.checked ? '' : 'none';
+    }
+
+    valorInput.addEventListener('input', updatePreview);
+    chkFoto.addEventListener('change', updateToggle);
+    chkVideo.addEventListener('change', updateToggle);
+    row.querySelector('.pkg-remove').addEventListener('click', () => row.remove());
+
+    updatePreview();
+    updateToggle();
+  }
+
+  document.getElementById('btn-add-pkg').addEventListener('click', () => addPkgRow());
+
+  function collectPackages() {
+    const pkgs = [];
+    pkgHolder.querySelectorAll('.pkg-row').forEach((row, idx) => {
+      const nome = row.querySelector('.pkg-nome').value.trim();
+      if (!nome) return;
+      pkgs.push({
+        nome,
+        valor: parseMoney(row.querySelector('.pkg-valor').value),
+        tempo: row.querySelector('.pkg-tempo').value.trim() || null,
+        qtd_fotos: row.querySelector('.pkg-qtd-fotos').value.trim() || null,
+        duracao_video: row.querySelector('.pkg-duracao-video').value.trim() || null,
+        itens: row.querySelector('.pkg-itens').value.trim() || null,
+        is_foto: row.querySelector('.pkg-is-foto').checked,
+        is_video: row.querySelector('.pkg-is-video').checked,
+        ordem: idx,
+      });
+    });
+    return pkgs;
+  }
+
+  // --- Abrir modal (novo ou edição) ---
+  async function abrirModal(jobId = null) {
+    editandoId = jobId;
+    statusEl.textContent = '';
+    statusEl.className = 'status-msg';
+    pkgHolder.innerHTML = '';
+
+    const { data: clients } = await supabase.from('clients').select('id, nome').order('nome');
+    clientesCache = clients || [];
+    const selectCliente = document.getElementById('f-cliente');
+    selectCliente.innerHTML = clientesCache.length
+      ? clientesCache.map(c => `<option value="${c.id}">${escapeHtml(c.nome)}</option>`).join('')
+      : `<option value="">Cadastre um cliente primeiro</option>`;
+
+    if (jobId) {
+      document.getElementById('modal-titulo').textContent = 'Editar trabalho';
+      document.getElementById('btn-excluir-job').style.display = '';
+
+      const { data: job } = await supabase.from('jobs').select('*').eq('id', jobId).single();
+      const { data: pkgs } = await supabase.from('packages').select('*').eq('job_id', jobId).order('ordem');
+
+      selectCliente.value = job.client_id || '';
+      document.getElementById('f-etapa').value = job.stage;
+      document.getElementById('f-tipo').value = job.tipo_trabalho || '';
+      document.getElementById('f-data').value = job.data_evento || '';
+      document.getElementById('f-horario').value = job.horario || '';
+      document.getElementById('f-local').value = job.local || '';
+      document.getElementById('f-prazo').value = job.prazo_entrega ?? 7;
+      document.getElementById('f-fotos').value = job.fotos_pendentes ?? 0;
+      document.getElementById('f-notas').value = job.notas || '';
+      document.getElementById('f-termos').value = job.termos || DEFAULT_TERMOS;
+
+      if (pkgs && pkgs.length) pkgs.forEach(p => addPkgRow(p));
+      else addPkgRow();
+    } else {
+      document.getElementById('modal-titulo').textContent = 'Novo trabalho';
+      document.getElementById('btn-excluir-job').style.display = 'none';
+      document.getElementById('f-etapa').value = 'contrato';
+      document.getElementById('f-tipo').value = '';
+      document.getElementById('f-data').value = '';
+      document.getElementById('f-horario').value = '';
+      document.getElementById('f-local').value = '';
+      document.getElementById('f-prazo').value = '7';
+      document.getElementById('f-fotos').value = '0';
+      document.getElementById('f-notas').value = '';
+      document.getElementById('f-termos').value = DEFAULT_TERMOS;
+      addPkgRow();
+    }
+
+    modal.style.display = 'flex';
+  }
+
+  function fecharModal() { modal.style.display = 'none'; }
+
+  document.getElementById('btn-novo').addEventListener('click', () => abrirModal(null));
+  document.getElementById('btn-cancelar-job').addEventListener('click', fecharModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) fecharModal(); });
+
+  function collectJobData() {
+    const clientId = document.getElementById('f-cliente').value;
+    if (!clientId) {
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Cadastre e selecione um cliente antes de continuar.';
+      return null;
+    }
+    return {
+      client_id: clientId,
+      stage: document.getElementById('f-etapa').value,
+      tipo_trabalho: document.getElementById('f-tipo').value.trim() || null,
+      data_evento: document.getElementById('f-data').value || null,
+      horario: document.getElementById('f-horario').value.trim() || null,
+      local: document.getElementById('f-local').value.trim() || null,
+      forma_pagamento: 'avista',
+      prazo_entrega: parseInt(document.getElementById('f-prazo').value, 10) || 7,
+      fotos_pendentes: parseInt(document.getElementById('f-fotos').value, 10) || 0,
+      notas: document.getElementById('f-notas').value.trim() || null,
+      termos: document.getElementById('f-termos').value.trim() || DEFAULT_TERMOS,
+    };
+  }
+
+  async function salvarJobEPacotes(jobData, pkgs) {
+    let jobId = editandoId;
+    if (jobId) {
+      const { error } = await supabase.from('jobs').update(jobData).eq('id', jobId);
+      if (error) throw error;
+    } else {
+      const { data, error } = await supabase.from('jobs').insert({ ...jobData, tenant_id: tenant.id }).select().single();
+      if (error) throw error;
+      jobId = data.id;
+    }
+    await supabase.from('packages').delete().eq('job_id', jobId);
+    if (pkgs.length) {
+      const { error: pkgError } = await supabase.from('packages').insert(pkgs.map(p => ({ ...p, job_id: jobId })));
+      if (pkgError) throw pkgError;
+    }
+    return jobId;
+  }
+
+  document.getElementById('form-job').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const jobData = collectJobData();
+    if (!jobData) return;
+    const pkgs = collectPackages();
+
+    try {
+      await salvarJobEPacotes(jobData, pkgs);
+      fecharModal();
+      carregarLista();
+    } catch (err) {
+      console.error(err);
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Não foi possível salvar. Tente novamente.';
+    }
+  });
+
+  document.getElementById('btn-excluir-job').addEventListener('click', async () => {
+    if (!editandoId) return;
+    if (!confirm('Excluir este trabalho do pipeline?')) return;
+    const { error } = await supabase.from('jobs').delete().eq('id', editandoId);
+    if (error) { console.error(error); alert('Não foi possível excluir.'); return; }
+    fecharModal();
+    carregarLista();
+  });
+
+  document.getElementById('btn-pdf-job').addEventListener('click', async () => {
+    const jobData = collectJobData();
+    if (!jobData) return;
+    const pkgs = collectPackages();
+    if (!pkgs.length) {
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Adicione ao menos um pacote para gerar o PDF.';
+      return;
+    }
+
+    try {
+      await salvarJobEPacotes(jobData, pkgs);
+    } catch (err) {
+      console.error(err);
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Não foi possível salvar antes de gerar o PDF.';
+      return;
+    }
+
+    const cliente = clientesCache.find(c => c.id === jobData.client_id);
+    await gerarPdfOrcamento(cliente, jobData, pkgs, tenant);
+    carregarLista();
+  });
+
+  async function imagemParaDataUrl(url) {
+    try {
+      const resp = await fetch(url);
+      const blob = await resp.blob();
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (err) {
+      console.error('Não foi possível carregar o logo para o PDF:', err);
+      return null;
+    }
+  }
+
+  async function gerarPdfOrcamento(cliente, job, pkgs, studio) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+    const ACCENT = '#1B5FA8', DARK = '#1A1A1A', MUTED = '#555555', FAINT = '#888888', LINE = '#D9D9D9';
+    const x0 = 20, x1 = 210 - 20;
+    const pageBottom = 297 - 20;
+    let y = 20;
+
+    function checkSpace(needed) {
+      if (y + needed > pageBottom) { doc.addPage(); y = 20; }
+    }
+    function line() {
+      doc.setDrawColor(LINE);
+      doc.line(x0, y, x1, y);
+    }
+    function wrap(text, size, maxWidth) {
+      doc.setFontSize(size);
+      return doc.splitTextToSize(text, maxWidth);
+    }
+
+    // ---------- cabeçalho do estúdio ----------
+    let textX = x0;
+    if (studio.logo_url) {
+      const dataUrl = await imagemParaDataUrl(studio.logo_url);
+      if (dataUrl) {
+        try { doc.addImage(dataUrl, 'PNG', x0, y, 18, 18); textX = x0 + 23; } catch (e) { /* ignora se o formato falhar */ }
+      }
+    }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(17); doc.setTextColor(DARK);
+    doc.text(studio.business_name || 'Seu Estúdio', textX, y + 5);
+    const instaFormatado = studio.instagram ? '@' + studio.instagram.replace('@', '') : null;
+    const contatoLinha = [instaFormatado, studio.contact_phone, studio.contact_email].filter(Boolean).join('  ·  ');
+    if (contatoLinha) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(FAINT);
+      doc.text(contatoLinha, textX, y + 10);
+    }
+    y += 30;
+
+    // ---------- título ----------
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(27); doc.setTextColor(DARK);
+    doc.text('ORÇAMENTO', x0, y);
+    y += 7;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.setTextColor(FAINT);
+    const hoje = new Date();
+    doc.text(`Emitido em ${String(hoje.getDate()).padStart(2,'0')}/${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`, x0, y);
+    y += 9;
+
+    // ---------- meta: cliente / tipo / data / horário ----------
+    line(); y += 7;
+    const meta = [
+      ['CLIENTE', cliente ? cliente.nome : '—'],
+      ['TIPO DE TRABALHO', job.tipo_trabalho || 'A combinar'],
+      ['DATA', job.data_evento ? fmtDate(job.data_evento) : 'A combinar'],
+      ['HORÁRIO', job.horario || 'A combinar'],
+    ];
+    const colW = (x1 - x0) / meta.length;
+    meta.forEach(([label, val], i) => {
+      const cx = x0 + i * colW;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(FAINT);
+      doc.text(label, cx, y);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(DARK);
+      doc.text(String(val).slice(0, 26), cx, y + 6);
+    });
+    y += 16;
+    line(); y += 11;
+
+    // ---------- pacotes propostos ----------
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(DARK);
+    doc.text('PACOTES PROPOSTOS', x0, y);
+    y += 10;
+
+    pkgs.forEach(p => {
+      checkSpace(34);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(DARK);
+      doc.text(p.nome, x0, y);
+      y += 7;
+
+      const specs = [];
+      if (p.is_foto && p.is_video) specs.push('Fotografia e Filmagem');
+      else if (p.is_foto) specs.push('Fotografia');
+      else if (p.is_video) specs.push('Filmagem');
+      if (p.tempo) specs.push(`Captação: ${p.tempo}`);
+      if (p.is_foto && p.qtd_fotos) specs.push(`Fotos: ${p.qtd_fotos}`);
+      if (p.is_video && p.duracao_video) specs.push(`Vídeo: ${p.duracao_video}`);
+      if (specs.length) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(MUTED);
+        doc.text(specs.join('   ·   '), x0, y);
+        y += 7;
+      }
+
+      const itens = (p.itens || '').split('\n').map(s => s.trim()).filter(Boolean);
+      if (itens.length) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor('#222222');
+        itens.forEach(item => {
+          const linhas = wrap('•  ' + item, 9.5, x1 - x0 - 6);
+          linhas.forEach(l => { checkSpace(6.5); doc.text(l, x0 + 3, y); y += 5.2; });
+        });
+        y += 2.5;
+      }
+
+      const valor = parseMoney(p.valor);
+      const total12x = valor * 1.15;
+      checkSpace(11);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(FAINT);
+      doc.text('À VISTA · PIX OU DINHEIRO', x0, y);
+      doc.text('EM ATÉ 12X (+15%)', x0 + 85, y);
+      y += 6;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(ACCENT);
+      doc.text(fmtMoney(valor), x0, y);
+      doc.text(`${fmtMoney(total12x)} · 12x de ${fmtMoney(total12x / 12)}`, x0 + 85, y);
+      y += 9;
+      line(); y += 10;
+    });
+
+    // ---------- prazo de entrega ----------
+    checkSpace(11);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(DARK);
+    doc.text(`Prazo de entrega: até ${job.prazo_entrega || 7} dias úteis após o evento.`, x0, y);
+    y += 9;
+
+    // ---------- termos e condições ----------
+    const termos = job.termos || DEFAULT_TERMOS;
+    if (termos) {
+      checkSpace(13);
+      line(); y += 8;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(MUTED);
+      termos.split('\n').forEach(paragrafo => {
+        if (!paragrafo.trim()) { y += 3.5; return; }
+        wrap(paragrafo, 9.5, x1 - x0).forEach(l => { checkSpace(6.5); doc.text(l, x0, y); y += 5.2; });
+      });
+    }
+
+    if (job.notas) {
+      y += 4.5; checkSpace(11);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(DARK);
+      doc.text('Observações:', x0, y); y += 5.5;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(MUTED);
+      wrap(job.notas, 9.5, x1 - x0).forEach(l => { checkSpace(6.5); doc.text(l, x0, y); y += 5.2; });
+    }
+
+    const nomeArquivo = `orcamento-${(cliente ? cliente.nome : 'cliente').toLowerCase().replace(/\s+/g, '-')}.pdf`;
+    doc.save(nomeArquivo);
+  }
+
+  carregarLista();
+</script>
+
+</body>
+</html>

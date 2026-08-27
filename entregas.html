@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entregas — StudioFlow</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+</head>
+<body class="app">
+<script type="module" src="js/mobile-nav.js?v=1"></script>
+<script type="module" src="js/search.js?v=1"></script>
+
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="mark">
+      <img src="assets/logo.png" alt="StudioFlow" class="icon">
+      <div class="wordmark">Studio<span>Flow</span></div>
+    </div>
+    <div class="tagline">Gestão para criativos</div>
+
+    <nav>
+      <a href="dashboard.html" class="nav-item">Dashboard</a>
+      <a href="clientes.html" class="nav-item">Clientes</a>
+      <a href="orcamentos.html" class="nav-item">Orçamentos</a>
+      <a href="pipeline.html" class="nav-item">Pipeline</a>
+      <a href="agenda.html" class="nav-item">Agenda</a>
+      <a href="entregas.html" class="nav-item active">Entregas</a>
+      <a href="financeiro.html" class="nav-item">Financeiro</a>
+      <a href="conteudo.html" class="nav-item">Conteúdo</a>
+      <a href="freelancer.html" class="nav-item">Freelancer</a>
+      <a href="anotacoes.html" class="nav-item">Anotações</a>
+      <a href="tarefas.html" class="nav-item">Tarefas</a>
+      <a href="modelos.html" class="nav-item">Modelos de Pacote</a>
+    </nav>
+
+    <div class="logout">
+      <a href="configuracoes.html" class="nav-item">Configurações</a>
+      <a href="#" class="nav-item" id="btn-logout">Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1 style="font-size:26px;font-weight:800;text-transform:uppercase;margin:0;">Entregas</h1>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin:4px 0 0;">Todo evento que já aconteceu cai aqui automaticamente, até você marcar como entregue.</p>
+      </div>
+    </div>
+
+    <div id="area-lista">
+      <div class="empty-state">Carregando...</div>
+    </div>
+  </main>
+
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+  import { fmtDate } from './js/utils.js?v=5';
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  let tenant;
+  try {
+    const profile = await ensureProfileAndTenant(session.user);
+    tenant = profile.tenants;
+    if (!isTenantActiveNow(tenant)) window.location.href = 'login.html';
+    else if (!tenant.onboarding_completo) window.location.href = 'onboarding.html';
+  } catch (err) {
+    console.error(err);
+    window.location.href = 'login.html';
+  }
+
+  document.getElementById('btn-logout').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  const areaLista = document.getElementById('area-lista');
+
+  async function carregarEntregas() {
+    const hojeISO = new Date().toISOString().slice(0, 10);
+
+    const { data: jobs, error } = await supabase
+      .from('jobs')
+      .select('id, tipo_trabalho, data_evento, clients(nome)')
+      .eq('stage', 'evento')
+      .not('data_evento', 'is', null)
+      .lt('data_evento', hojeISO)
+      .order('data_evento', { ascending: true });
+
+    if (error) {
+      console.error(error);
+      areaLista.innerHTML = `<div class="empty-state">Não foi possível carregar as entregas.</div>`;
+      return;
+    }
+
+    if (!jobs || jobs.length === 0) {
+      areaLista.innerHTML = `<div class="empty-state">Nada pendente — tudo que já aconteceu foi entregue. 🎉</div>`;
+      return;
+    }
+
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+
+    const linhas = jobs.map(j => {
+      const dataEvento = new Date(j.data_evento + 'T00:00:00');
+      const dias = Math.round((hoje - dataEvento) / (1000 * 60 * 60 * 24));
+      const atrasoTxt = dias === 0 ? 'evento foi hoje' : dias === 1 ? 'evento foi ontem' : `evento foi há ${dias} dias`;
+      const critico = dias > 3;
+      const nomeCliente = j.clients ? j.clients.nome : '—';
+
+      return `
+        <div class="entrega-row" data-id="${j.id}">
+          <input type="checkbox">
+          <div class="info">
+            <span class="nome" data-action="abrir">${escapeHtml(nomeCliente)} — ${escapeHtml(j.tipo_trabalho || 'trabalho')}</span>
+          </div>
+          <div class="atraso ${critico ? 'critico' : 'leve'}">${fmtDate(j.data_evento)} · ${atrasoTxt}</div>
+        </div>`;
+    }).join('');
+
+    areaLista.innerHTML = `<div class="list-card">${linhas}</div>`;
+
+    areaLista.querySelectorAll('.nome[data-action="abrir"]').forEach(el => {
+      el.addEventListener('click', () => {
+        window.location.href = 'orcamentos.html';
+      });
+    });
+
+    areaLista.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+      chk.addEventListener('change', async (e) => {
+        const row = e.target.closest('.entrega-row');
+        const jobId = row.dataset.id;
+        if (!e.target.checked) return;
+
+        e.target.disabled = true;
+        const { error } = await supabase.from('jobs').update({ stage: 'entrega' }).eq('id', jobId);
+        if (error) {
+          console.error(error);
+          alert('Não foi possível marcar como entregue.');
+          e.target.checked = false;
+          e.target.disabled = false;
+          return;
+        }
+        row.classList.add('saindo');
+        setTimeout(() => {
+          row.remove();
+          if (!areaLista.querySelector('.entrega-row')) {
+            areaLista.innerHTML = `<div class="empty-state">Nada pendente — tudo que já aconteceu foi entregue. 🎉</div>`;
+          }
+        }, 250);
+      });
+    });
+  }
+
+  carregarEntregas();
+</script>
+
+</body>
+</html>

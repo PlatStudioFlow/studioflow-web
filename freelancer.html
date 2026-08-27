@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Freelancer — StudioFlow</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+</head>
+<body class="app">
+<script type="module" src="js/mobile-nav.js?v=1"></script>
+<script type="module" src="js/search.js?v=1"></script>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="mark"><img src="assets/logo.png" alt="StudioFlow" class="icon"><div class="wordmark">Studio<span>Flow</span></div></div>
+    <div class="tagline">Gestão para criativos</div>
+    <nav>
+      <a href="dashboard.html" class="nav-item">Dashboard</a>
+      <a href="clientes.html" class="nav-item">Clientes</a>
+      <a href="orcamentos.html" class="nav-item">Orçamentos</a>
+      <a href="pipeline.html" class="nav-item">Pipeline</a>
+      <a href="agenda.html" class="nav-item">Agenda</a>
+      <a href="entregas.html" class="nav-item">Entregas</a>
+      <a href="financeiro.html" class="nav-item">Financeiro</a>
+      <a href="conteudo.html" class="nav-item">Conteúdo</a>
+      <a href="freelancer.html" class="nav-item active">Freelancer</a>
+      <a href="anotacoes.html" class="nav-item">Anotações</a>
+      <a href="tarefas.html" class="nav-item">Tarefas</a>
+      <a href="modelos.html" class="nav-item">Modelos de Pacote</a>
+    </nav>
+    <div class="logout">
+      <a href="configuracoes.html" class="nav-item">Configurações</a>
+      <a href="#" class="nav-item" id="btn-logout">Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1 style="font-size:26px;font-weight:800;text-transform:uppercase;margin:0;">Freelancer</h1>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin:4px 0 0;">Clientes/agências para quem você trabalha como freelancer, com data de pagamento fixa.</p>
+      </div>
+      <button class="btn-primary" id="btn-novo">+ Novo freelancer</button>
+    </div>
+    <div id="area-lista"><div class="empty-state">Carregando...</div></div>
+  </main>
+</div>
+
+<div class="modal-overlay form-modal" id="modal-freela" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h2 id="modal-titulo-freela">Novo freelancer</h2></div>
+    <div class="modal-body">
+      <form id="form-freela">
+        <div class="field">
+          <label for="f-nome">Nome do profissional</label>
+          <input type="text" id="f-nome" required>
+        </div>
+        <div class="field">
+          <label for="f-pagto">Data de pagamento</label>
+          <input type="text" id="f-pagto" placeholder='ex: "dia 30 de cada mês" ou uma data'>
+        </div>
+        <div class="status-msg" id="status-freela"></div>
+      </form>
+
+      <div id="area-trabalhos" style="display:none">
+        <hr class="job-divider">
+        <div class="job-section-label">Trabalhos do período atual</div>
+        <div id="trabalho-holder"></div>
+        <div class="addrow">
+          <input type="text" id="nt-desc" placeholder="descrição do trabalho">
+          <input type="text" id="nt-valor" placeholder="valor R$">
+          <button type="button" class="link-btn" id="btn-add-trabalho">+ adicionar</button>
+        </div>
+        <div class="total-periodo" id="total-periodo"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-danger" id="btn-excluir-freela" style="display:none">Excluir</button>
+      <button type="button" class="btn-ghost" id="btn-marcar-pago" style="display:none">Marcar período como pago</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn-secondary" id="btn-fechar-freela">Fechar</button>
+      <button type="submit" form="form-freela" id="btn-salvar-freela">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+  import { parseMoney, fmtMoney } from './js/utils.js?v=5';
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+  let tenant;
+  try {
+    const profile = await ensureProfileAndTenant(session.user);
+    tenant = profile.tenants;
+    if (!isTenantActiveNow(tenant)) window.location.href = 'login.html';
+    else if (!tenant.onboarding_completo) window.location.href = 'onboarding.html';
+  } catch (err) { console.error(err); window.location.href = 'login.html'; }
+
+  document.getElementById('btn-logout').addEventListener('click', async (e) => {
+    e.preventDefault(); await supabase.auth.signOut(); window.location.href = 'login.html';
+  });
+
+  function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+  const areaLista = document.getElementById('area-lista');
+  const modal = document.getElementById('modal-freela');
+  const statusEl = document.getElementById('status-freela');
+  let editandoId = null;
+
+  async function carregarLista() {
+    const { data: freelancers, error } = await supabase.from('freelancers').select('id, nome, data_pagamento').order('nome');
+    if (error) { console.error(error); areaLista.innerHTML = `<div class="empty-state">Não foi possível carregar.</div>`; return; }
+    if (!freelancers || !freelancers.length) {
+      areaLista.innerHTML = `<div class="empty-state">Nenhum freelancer cadastrado ainda.</div>`;
+      return;
+    }
+
+    const { data: trabalhos } = await supabase.from('freelance_trabalhos').select('freelancer_id, valor').eq('pago', false);
+    const totais = {}, contagens = {};
+    (trabalhos || []).forEach(t => {
+      totais[t.freelancer_id] = (totais[t.freelancer_id] || 0) + parseFloat(t.valor || 0);
+      contagens[t.freelancer_id] = (contagens[t.freelancer_id] || 0) + 1;
+    });
+
+    areaLista.innerHTML = freelancers.map(f => `
+      <div class="freela-card" data-id="${f.id}">
+        <div class="head">
+          <span class="nome">${escapeHtml(f.nome)}</span>
+          <span class="total">${fmtMoney(totais[f.id] || 0)}</span>
+        </div>
+        <div class="sub">Pagamento: ${escapeHtml(f.data_pagamento || 'sem data definida')} · ${contagens[f.id] || 0} trabalho(s) no período atual</div>
+      </div>
+    `).join('');
+
+    areaLista.querySelectorAll('.freela-card').forEach(card => {
+      card.addEventListener('click', () => abrirModal(card.dataset.id));
+    });
+  }
+
+  async function renderTrabalhos() {
+    const holder = document.getElementById('trabalho-holder');
+    const areaTrabalhos = document.getElementById('area-trabalhos');
+    if (!editandoId) { areaTrabalhos.style.display = 'none'; return; }
+    areaTrabalhos.style.display = '';
+
+    const { data: trabalhos } = await supabase.from('freelance_trabalhos').select('*').eq('freelancer_id', editandoId).eq('pago', false).order('created_at');
+    holder.innerHTML = (trabalhos && trabalhos.length)
+      ? trabalhos.map(t => `
+          <div class="trabalho-item" data-id="${t.id}">
+            <span class="desc">${escapeHtml(t.descricao || '—')}</span>
+            <span class="valor">${fmtMoney(t.valor)}</span>
+            <button type="button" class="rm" data-id="${t.id}">×</button>
+          </div>`).join('')
+      : `<div style="color:var(--ink-faint);font-size:13px;padding:6px 0;">Nenhum trabalho lançado neste período ainda.</div>`;
+
+    const total = (trabalhos || []).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    document.getElementById('total-periodo').textContent = `Total do período: ${fmtMoney(total)}`;
+    document.getElementById('btn-marcar-pago').style.display = (trabalhos && trabalhos.length) ? '' : 'none';
+
+    holder.querySelectorAll('.rm').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await supabase.from('freelance_trabalhos').delete().eq('id', btn.dataset.id);
+        renderTrabalhos();
+      });
+    });
+  }
+
+  async function abrirModal(id = null) {
+    editandoId = id;
+    statusEl.textContent = ''; statusEl.className = 'status-msg';
+    document.getElementById('modal-titulo-freela').textContent = id ? 'Editar freelancer' : 'Novo freelancer';
+    document.getElementById('btn-excluir-freela').style.display = id ? '' : 'none';
+
+    if (id) {
+      const { data: f } = await supabase.from('freelancers').select('*').eq('id', id).single();
+      document.getElementById('f-nome').value = f.nome || '';
+      document.getElementById('f-pagto').value = f.data_pagamento || '';
+    } else {
+      document.getElementById('f-nome').value = '';
+      document.getElementById('f-pagto').value = '';
+    }
+    document.getElementById('nt-desc').value = '';
+    document.getElementById('nt-valor').value = '';
+    await renderTrabalhos();
+    modal.style.display = 'flex';
+  }
+
+  function fecharModal() { modal.style.display = 'none'; carregarLista(); }
+
+  document.getElementById('btn-novo').addEventListener('click', () => abrirModal(null));
+  document.getElementById('btn-fechar-freela').addEventListener('click', fecharModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) fecharModal(); });
+
+  document.getElementById('form-freela').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nome = document.getElementById('f-nome').value.trim();
+    if (!nome) { statusEl.className = 'status-msg status-erro'; statusEl.textContent = 'Informe o nome do profissional.'; return; }
+    const payload = { nome, data_pagamento: document.getElementById('f-pagto').value.trim() || null };
+
+    let error;
+    if (editandoId) {
+      ({ error } = await supabase.from('freelancers').update(payload).eq('id', editandoId));
+    } else {
+      const resp = await supabase.from('freelancers').insert({ ...payload, tenant_id: tenant.id }).select().single();
+      error = resp.error;
+      if (!error) editandoId = resp.data.id;
+    }
+    if (error) { console.error(error); statusEl.className = 'status-msg status-erro'; statusEl.textContent = 'Não foi possível salvar.'; return; }
+    statusEl.className = 'status-msg status-ok'; statusEl.textContent = 'Salvo.';
+    await renderTrabalhos();
+  });
+
+  document.getElementById('btn-add-trabalho').addEventListener('click', async () => {
+    if (!editandoId) { statusEl.className = 'status-msg status-erro'; statusEl.textContent = 'Salve o freelancer primeiro (botão Salvar) antes de adicionar trabalhos.'; return; }
+    const desc = document.getElementById('nt-desc').value.trim();
+    const valor = parseMoney(document.getElementById('nt-valor').value);
+    if (!desc || valor <= 0) { statusEl.className = 'status-msg status-erro'; statusEl.textContent = 'Preencha a descrição e o valor do trabalho.'; return; }
+    await supabase.from('freelance_trabalhos').insert({ freelancer_id: editandoId, descricao: desc, valor, pago: false });
+    document.getElementById('nt-desc').value = ''; document.getElementById('nt-valor').value = '';
+    statusEl.textContent = ''; statusEl.className = 'status-msg';
+    renderTrabalhos();
+  });
+
+  document.getElementById('btn-marcar-pago').addEventListener('click', async () => {
+    if (!editandoId) return;
+    const { data: trabalhos } = await supabase.from('freelance_trabalhos').select('id, valor').eq('freelancer_id', editandoId).eq('pago', false);
+    if (!trabalhos || !trabalhos.length) return;
+    const total = trabalhos.reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    if (!confirm(`Marcar ${trabalhos.length} trabalho(s) somando ${fmtMoney(total)} como pagos?\nEles saem do período atual (o histórico continua salvo).`)) return;
+    await supabase.from('freelance_trabalhos').update({ pago: true }).eq('freelancer_id', editandoId).eq('pago', false);
+    renderTrabalhos();
+  });
+
+  document.getElementById('btn-excluir-freela').addEventListener('click', async () => {
+    if (!editandoId || !confirm('Excluir este freelancer e todo o histórico de trabalhos dele?')) return;
+    await supabase.from('freelancers').delete().eq('id', editandoId);
+    modal.style.display = 'none';
+    carregarLista();
+  });
+
+  carregarLista();
+</script>
+</body>
+</html>

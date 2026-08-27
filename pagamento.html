@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pagamento — StudioFlow</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=3">
+</head>
+<body>
+
+<div class="frame">
+  <div class="mark">
+    <img src="assets/logo.png" alt="StudioFlow" class="icon">
+    <div class="wordmark">Studio<span>Flow</span></div>
+  </div>
+
+  <div class="card">
+    <h1>Ativar acesso</h1>
+    <p class="lead" id="lead-text">Seu cadastro foi confirmado. Falta só ativar a assinatura mensal (R$ 29,90/mês, via cartão de crédito) pra começar a usar.</p>
+
+    <div class="status-msg" id="status" style="display:none"></div>
+
+    <button type="button" id="btn-pagar">Ir para o pagamento</button>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  let tenant;
+  try {
+    const profile = await ensureProfileAndTenant(session.user);
+    tenant = profile.tenants;
+  } catch (err) {
+    console.error(err);
+    window.location.href = 'login.html';
+  }
+
+  if (isTenantActiveNow(tenant)) {
+    window.location.href = tenant.onboarding_completo ? 'dashboard.html' : 'onboarding.html';
+  }
+  if (tenant.status === 'bloqueado') {
+    document.getElementById('lead-text').textContent = 'Seu acesso está bloqueado. Entre em contato com o suporte.';
+    document.getElementById('btn-pagar').style.display = 'none';
+  }
+
+  const btn = document.getElementById('btn-pagar');
+  const statusEl = document.getElementById('status');
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Gerando link de pagamento...';
+    statusEl.style.display = 'none';
+
+    try {
+      const { data, error } = await supabase.functions.invoke('criar-cobranca');
+
+      if (error || !data?.link) {
+        throw error || new Error('Sem link de pagamento na resposta');
+      }
+
+      window.location.href = data.link;
+    } catch (err) {
+      console.error(err);
+      statusEl.className = 'status-msg status-erro';
+      statusEl.style.display = 'block';
+      statusEl.textContent = 'Não foi possível gerar o pagamento agora. Tente novamente em instantes.';
+      btn.disabled = false;
+      btn.textContent = 'Ir para o pagamento';
+    }
+  });
+</script>
+
+</body>
+</html>

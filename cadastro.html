@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Criar conta — StudioFlow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="assets/logo-small.png">
+<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+</head>
+<body>
+
+<div class="frame">
+  <div class="mark">
+    <img src="assets/logo.png" alt="StudioFlow" class="icon">
+    <div class="wordmark">Studio<span>Flow</span></div>
+  </div>
+
+  <div class="card">
+    <h1>Criar sua conta</h1>
+    <p class="lead">Cadastre-se para solicitar acesso à plataforma. A liberação é feita manualmente após a confirmação do pagamento.</p>
+
+    <form id="form-cadastro">
+      <div class="field">
+        <label for="business_name">Nome do seu estúdio</label>
+        <input type="text" id="business_name" required placeholder="Ex: Lucas Mendes Fotografia">
+      </div>
+
+      <div class="field">
+        <label for="email">E-mail</label>
+        <input type="email" id="email" required placeholder="voce@email.com">
+      </div>
+
+      <div class="field">
+        <label for="password">Senha</label>
+        <input type="password" id="password" required minlength="6" placeholder="Mínimo 6 caracteres">
+        <small>Essa é a senha de acesso à plataforma — guarde em local seguro.</small>
+      </div>
+
+      <button type="submit" id="btn-submit">Criar conta</button>
+      <div class="status-msg" id="status"></div>
+    </form>
+
+    <div class="switch">Já tem conta? <a href="login.html">Entrar</a></div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+
+  const form = document.getElementById('form-cadastro');
+  const statusEl = document.getElementById('status');
+  const btn = document.getElementById('btn-submit');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    btn.disabled = true;
+    statusEl.className = 'status-msg';
+    statusEl.textContent = '';
+
+    const business_name = document.getElementById('business_name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { business_name } }
+    });
+
+    if (error) {
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = traduzErro(error.message);
+      btn.disabled = false;
+      return;
+    }
+
+    // Se o projeto não exige confirmação de e-mail, já vem com sessão ativa.
+    // Se exigir, o usuário confirma o e-mail e o perfil é criado no primeiro login.
+    if (data.session) {
+      statusEl.className = 'status-msg status-ok';
+      statusEl.textContent = 'Conta criada! Redirecionando...';
+      setTimeout(() => window.location.href = 'login.html', 1200);
+    } else {
+      statusEl.className = 'status-msg status-ok';
+      statusEl.textContent = 'Conta criada! Confira seu e-mail para confirmar o cadastro antes de entrar.';
+      form.reset();
+      btn.disabled = false;
+    }
+  });
+
+  function traduzErro(msg) {
+    if (msg.includes('already registered')) return 'Este e-mail já está cadastrado.';
+    if (msg.includes('Password')) return 'A senha precisa ter pelo menos 6 caracteres.';
+    return 'Não foi possível criar a conta. Tente novamente.';
+  }
+</script>
+
+</body>
+</html>

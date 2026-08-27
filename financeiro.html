@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financeiro — StudioFlow</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="app">
+<script type="module" src="js/mobile-nav.js?v=1"></script>
+<script type="module" src="js/search.js?v=1"></script>
+
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="mark">
+      <img src="assets/logo.png" alt="StudioFlow" class="icon">
+      <div class="wordmark">Studio<span>Flow</span></div>
+    </div>
+    <div class="tagline">Gestão para criativos</div>
+
+    <nav>
+      <a href="dashboard.html" class="nav-item">Dashboard</a>
+      <a href="clientes.html" class="nav-item">Clientes</a>
+      <a href="orcamentos.html" class="nav-item">Orçamentos</a>
+      <a href="pipeline.html" class="nav-item">Pipeline</a>
+      <a href="agenda.html" class="nav-item">Agenda</a>
+      <a href="entregas.html" class="nav-item">Entregas</a>
+      <a href="financeiro.html" class="nav-item active">Financeiro</a>
+      <a href="conteudo.html" class="nav-item">Conteúdo</a>
+      <a href="freelancer.html" class="nav-item">Freelancer</a>
+      <a href="anotacoes.html" class="nav-item">Anotações</a>
+      <a href="tarefas.html" class="nav-item">Tarefas</a>
+      <a href="modelos.html" class="nav-item">Modelos de Pacote</a>
+    </nav>
+
+    <div class="logout">
+      <a href="configuracoes.html" class="nav-item">Configurações</a>
+      <a href="#" class="nav-item" id="btn-logout">Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <h1 style="font-size:26px;font-weight:800;text-transform:uppercase;margin:0;">Financeiro</h1>
+    </div>
+
+    <div class="fin-filter">
+      <label>Ver caixa de</label>
+      <select class="select-input" id="filtro-mes"></select>
+      <span style="color:var(--line);margin:0 4px;">|</span>
+      <label>Extrato em PDF</label>
+      <select class="select-input" id="periodo-extrato" style="max-width:200px;">
+        <option value="mes-atual">Mês selecionado acima</option>
+        <option value="3">Últimos 3 meses</option>
+        <option value="6">Últimos 6 meses</option>
+        <option value="12">Últimos 12 meses</option>
+      </select>
+      <button class="btn-primary" id="btn-extrato" type="button" style="background:var(--surface2);color:var(--ink);">Gerar PDF</button>
+    </div>
+
+    <div class="stat-grid" id="stat-grid" style="margin-bottom:22px;">
+      <div class="stat-card"><div class="num">—</div><div class="label">carregando...</div></div>
+    </div>
+
+    <div class="fin-cols">
+      <div class="fin-panel">
+        <div class="panel-title">Resumo mensal</div>
+        <div id="resumo-mensal"></div>
+      </div>
+
+      <div class="fin-panel">
+        <div class="panel-title">Novo lançamento</div>
+        <form id="form-transacao">
+          <div class="field">
+            <label for="t-tipo">Tipo</label>
+            <select class="select-input" id="t-tipo">
+              <option value="entrada">Entrada</option>
+              <option value="despesa">Despesa</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="t-valor">Valor (R$)</label>
+            <input type="text" id="t-valor" placeholder="0,00">
+          </div>
+          <div class="field">
+            <label for="t-data">Data</label>
+            <input type="date" id="t-data">
+          </div>
+          <div class="field">
+            <label for="t-desc">Descrição</label>
+            <input type="text" id="t-desc" placeholder="ex: festa de 15 anos da Julia">
+          </div>
+          <div class="hint-small">a descrição é obrigatória, pra manter o histórico rastreável</div>
+          <div class="status-msg" id="status-transacao"></div>
+          <button type="submit">Lançar</button>
+        </form>
+      </div>
+    </div>
+
+    <h2 class="section-title" id="titulo-lancamentos">Lançamentos</h2>
+    <div id="area-lancamentos"><div class="empty-state">Carregando...</div></div>
+  </main>
+
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+  import { parseMoney, fmtMoney, fmtDate } from './js/utils.js?v=5';
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  let tenant;
+  try {
+    const profile = await ensureProfileAndTenant(session.user);
+    tenant = profile.tenants;
+    if (!isTenantActiveNow(tenant)) window.location.href = 'login.html';
+    else if (!tenant.onboarding_completo) window.location.href = 'onboarding.html';
+  } catch (err) {
+    console.error(err);
+    window.location.href = 'login.html';
+  }
+
+  document.getElementById('btn-logout').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  function mesAnoLabel(mk) {
+    const [y, m] = mk.split('-');
+    return `${MESES[parseInt(m, 10) - 1]} ${y}`;
+  }
+
+  document.getElementById('t-data').value = new Date().toISOString().slice(0, 10);
+
+  let filtroMes = null; // null = todos os meses
+
+  async function carregarFinanceiro() {
+    const [{ data: trans }, { data: jobs }] = await Promise.all([
+      supabase.from('transactions').select('*').order('data', { ascending: false }),
+      supabase.from('jobs').select('id, packages(valor)')
+    ]);
+
+    const todasTrans = trans || [];
+
+    // --- filtro de mês ---
+    const mesesDisponiveis = [...new Set(todasTrans.filter(t => t.data).map(t => t.data.slice(0, 7)))].sort().reverse();
+    const selectMes = document.getElementById('filtro-mes');
+    const valorAtual = selectMes.value || '';
+    selectMes.innerHTML = `<option value="">Todos os meses</option>` +
+      mesesDisponiveis.map(mk => `<option value="${mk}">${mesAnoLabel(mk)}</option>`).join('');
+    selectMes.value = mesesDisponiveis.includes(valorAtual) ? valorAtual : '';
+    filtroMes = selectMes.value || null;
+
+    const transView = filtroMes ? todasTrans.filter(t => (t.data || '').slice(0, 7) === filtroMes) : todasTrans;
+
+    const entradas = transView.filter(t => t.tipo === 'entrada').reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    const despesas = transView.filter(t => t.tipo === 'despesa').reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    const saldo = entradas - despesas;
+
+    const jobsComValor = (jobs || []).filter(j => j.packages && j.packages.length);
+    const ticket = jobsComValor.length
+      ? jobsComValor.reduce((s, j) => s + parseFloat(j.packages[0].valor || 0), 0) / jobsComValor.length
+      : 0;
+
+    const sufixo = filtroMes ? ' no período' : '';
+    document.getElementById('stat-grid').innerHTML = `
+      <div class="stat-card"><div class="num sage">${fmtMoney(entradas)}</div><div class="label">entradas${sufixo}</div></div>
+      <div class="stat-card"><div class="num brick">${fmtMoney(despesas)}</div><div class="label">despesas${sufixo}</div></div>
+      <div class="stat-card"><div class="num">${fmtMoney(saldo)}</div><div class="label">faturamento (saldo)</div></div>
+      <div class="stat-card"><div class="num">${fmtMoney(ticket)}</div><div class="label">ticket médio (geral)</div></div>
+    `;
+
+    // --- resumo mensal (últimos 6 meses com lançamento) ---
+    const meses = {};
+    todasTrans.forEach(t => {
+      const mk = (t.data || '').slice(0, 7);
+      if (!mk) return;
+      meses[mk] = meses[mk] || { entrada: 0, despesa: 0 };
+      meses[mk][t.tipo] += parseFloat(t.valor || 0);
+    });
+    const chavesMeses = Object.keys(meses).sort().reverse().slice(0, 6);
+    document.getElementById('resumo-mensal').innerHTML = chavesMeses.length
+      ? chavesMeses.map(mk => `
+          <div class="resumo-row">
+            <span class="mes">${mesAnoLabel(mk)}</span>
+            <span class="valores"><span class="entrada">+${fmtMoney(meses[mk].entrada)}</span><span class="despesa">-${fmtMoney(meses[mk].despesa)}</span></span>
+          </div>`).join('')
+      : `<div style="color:var(--ink-faint);font-size:13px;">Sem lançamentos ainda.</div>`;
+
+    // --- lançamentos (tabela) ---
+    document.getElementById('titulo-lancamentos').innerHTML =
+      filtroMes ? `Lançamentos <span class="count">— ${mesAnoLabel(filtroMes)}</span>` : 'Lançamentos';
+
+    const areaLanc = document.getElementById('area-lancamentos');
+    if (!transView.length) {
+      areaLanc.innerHTML = `<div class="empty-state">Nenhum lançamento neste período.</div>`;
+    } else {
+      areaLanc.innerHTML = `<div class="list-card">${transView.map(t => `
+        <div class="trans-row" data-id="${t.id}">
+          <span class="data">${t.data ? fmtDate(t.data) : '—'}</span>
+          <span class="tag-pill tipo-pill ${t.tipo === 'entrada' ? 'tag-entrega' : 'tag-avulso'}">${t.tipo === 'entrada' ? 'Entrada' : 'Despesa'}</span>
+          <span class="desc">${escapeHtml(t.descricao || '—')}</span>
+          <span class="valor ${t.tipo}">${t.tipo === 'entrada' ? '+' : '-'} ${fmtMoney(t.valor)}</span>
+          <button class="del-btn" title="Excluir">×</button>
+        </div>
+      `).join('')}</div>`;
+
+      areaLanc.querySelectorAll('.del-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const row = btn.closest('.trans-row');
+          if (!confirm('Excluir este lançamento?')) return;
+          const { error } = await supabase.from('transactions').delete().eq('id', row.dataset.id);
+          if (error) { console.error(error); alert('Não foi possível excluir.'); return; }
+          carregarFinanceiro();
+        });
+      });
+    }
+  }
+
+  document.getElementById('filtro-mes').addEventListener('change', carregarFinanceiro);
+
+  // --- Extrato em PDF (por mês selecionado, ou últimos 3/6/12 meses) ---
+  document.getElementById('btn-extrato').addEventListener('click', async () => {
+    const { data: trans } = await supabase.from('transactions').select('*').order('data', { ascending: true });
+    const todasTrans = trans || [];
+    const periodo = document.getElementById('periodo-extrato').value;
+
+    let transFiltradas, tituloPeriodo;
+    if (periodo === 'mes-atual') {
+      if (filtroMes) {
+        transFiltradas = todasTrans.filter(t => (t.data || '').slice(0, 7) === filtroMes);
+        tituloPeriodo = mesAnoLabel(filtroMes);
+      } else {
+        transFiltradas = todasTrans;
+        tituloPeriodo = 'Todos os lançamentos';
+      }
+    } else {
+      const meses = parseInt(periodo, 10);
+      const limite = new Date();
+      limite.setMonth(limite.getMonth() - meses);
+      const limiteISO = limite.toISOString().slice(0, 10);
+      transFiltradas = todasTrans.filter(t => t.data && t.data >= limiteISO);
+      tituloPeriodo = `Últimos ${meses} meses`;
+    }
+
+    gerarPdfExtrato(transFiltradas, tituloPeriodo, tenant);
+  });
+
+  function gerarPdfExtrato(trans, tituloPeriodo, studio) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const ACCENT = '#1B5FA8', DARK = '#1A1A1A', MUTED = '#555555', FAINT = '#888888', LINE = '#D9D9D9', OK = '#3F8B5D', ERR = '#C0473A';
+    const x0 = 18, x1 = 210 - 18;
+    const pageBottom = 297 - 18;
+    let y = 20;
+
+    function checkSpace(needed) { if (y + needed > pageBottom) { doc.addPage(); y = 20; } }
+    function line() { doc.setDrawColor(LINE); doc.line(x0, y, x1, y); }
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(DARK);
+    doc.text(studio.business_name || 'Extrato financeiro', x0, y);
+    y += 7;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(FAINT);
+    doc.text('Extrato financeiro', x0, y);
+    y += 10;
+
+    line(); y += 8;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(DARK);
+    doc.text(`Período: ${tituloPeriodo}`, x0, y);
+    y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(FAINT);
+    const hoje = new Date();
+    doc.text(`Gerado em ${String(hoje.getDate()).padStart(2,'0')}/${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`, x0, y);
+    y += 10;
+
+    const entradas = trans.filter(t => t.tipo === 'entrada').reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    const despesas = trans.filter(t => t.tipo === 'despesa').reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    const saldo = entradas - despesas;
+
+    const colW = (x1 - x0) / 3;
+    [['ENTRADAS', entradas, OK], ['DESPESAS', despesas, ERR], ['SALDO', saldo, ACCENT]].forEach(([label, val, cor], i) => {
+      const cx = x0 + i * colW;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(FAINT);
+      doc.text(label, cx, y);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(cor);
+      doc.text(fmtMoney(val), cx, y + 7);
+    });
+    y += 16;
+    line(); y += 9;
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(DARK);
+    doc.text('Lançamentos', x0, y);
+    y += 7;
+
+    if (!trans.length) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(FAINT);
+      doc.text('Nenhum lançamento neste período.', x0, y);
+    } else {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(FAINT);
+      doc.text('DATA', x0, y);
+      doc.text('DESCRIÇÃO', x0 + 26, y);
+      doc.text('VALOR', x1, y, { align: 'right' });
+      y += 5; line(); y += 5;
+
+      trans.forEach(t => {
+        checkSpace(7);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(MUTED);
+        doc.text(t.data ? fmtDate(t.data) : '—', x0, y);
+        const desc = (t.descricao || '—').slice(0, 55);
+        doc.text(desc, x0 + 26, y);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(t.tipo === 'entrada' ? OK : ERR);
+        const sinal = t.tipo === 'entrada' ? '+ ' : '- ';
+        doc.text(sinal + fmtMoney(t.valor), x1, y, { align: 'right' });
+        y += 6;
+      });
+    }
+
+    const sufixoArquivo = tituloPeriodo.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    doc.save(`extrato-financeiro-${sufixoArquivo}.pdf`);
+  }
+
+  document.getElementById('form-transacao').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const statusEl = document.getElementById('status-transacao');
+    const valor = parseMoney(document.getElementById('t-valor').value);
+    const descricao = document.getElementById('t-desc').value.trim();
+
+    if (valor <= 0) {
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Informe um valor válido.';
+      return;
+    }
+    if (!descricao) {
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Descreva de onde vem esse valor.';
+      return;
+    }
+
+    const { error } = await supabase.from('transactions').insert({
+      tenant_id: tenant.id,
+      tipo: document.getElementById('t-tipo').value,
+      valor,
+      data: document.getElementById('t-data').value || new Date().toISOString().slice(0, 10),
+      descricao,
+    });
+
+    if (error) {
+      console.error(error);
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Não foi possível lançar.';
+      return;
+    }
+
+    statusEl.className = ''; statusEl.textContent = '';
+    document.getElementById('t-valor').value = '';
+    document.getElementById('t-desc').value = '';
+    carregarFinanceiro();
+  });
+
+  carregarFinanceiro();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline — StudioFlow</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="app">
+<script type="module" src="js/mobile-nav.js?v=1"></script>
+<script type="module" src="js/search.js?v=1"></script>
+
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="mark">
+      <img src="assets/logo.png" alt="StudioFlow" class="icon">
+      <div class="wordmark">Studio<span>Flow</span></div>
+    </div>
+    <div class="tagline">Gestão para criativos</div>
+
+    <nav>
+      <a href="dashboard.html" class="nav-item">Dashboard</a>
+      <a href="clientes.html" class="nav-item">Clientes</a>
+      <a href="orcamentos.html" class="nav-item">Orçamentos</a>
+      <a href="pipeline.html" class="nav-item active">Pipeline</a>
+      <a href="agenda.html" class="nav-item">Agenda</a>
+      <a href="entregas.html" class="nav-item">Entregas</a>
+      <a href="financeiro.html" class="nav-item">Financeiro</a>
+      <a href="conteudo.html" class="nav-item">Conteúdo</a>
+      <a href="freelancer.html" class="nav-item">Freelancer</a>
+      <a href="anotacoes.html" class="nav-item">Anotações</a>
+      <a href="tarefas.html" class="nav-item">Tarefas</a>
+      <a href="modelos.html" class="nav-item">Modelos de Pacote</a>
+    </nav>
+
+    <div class="logout">
+      <a href="configuracoes.html" class="nav-item">Configurações</a>
+      <a href="#" class="nav-item" id="btn-logout">Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1 style="font-size:26px;font-weight:800;text-transform:uppercase;margin:0;">Pipeline</h1>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin:4px 0 0;">Clique num trabalho para editar ou mudar a etapa.</p>
+      </div>
+      <button class="btn-primary" id="btn-novo">+ Novo trabalho</button>
+    </div>
+
+    <div id="area-lista">
+      <div class="empty-state">Carregando...</div>
+    </div>
+  </main>
+
+</div>
+
+<!-- Modal de trabalho / orçamento -->
+<div class="modal-overlay form-modal job-modal" id="modal-job" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2 id="modal-titulo">Novo trabalho</h2>
+    </div>
+    <div class="modal-body">
+      <form id="form-job">
+        <div class="field-row">
+          <div class="field">
+            <label for="f-cliente">Cliente</label>
+            <select class="select-input" id="f-cliente" required></select>
+          </div>
+          <div class="field">
+            <label for="f-etapa">Etapa</label>
+            <select class="select-input" id="f-etapa">
+              <option value="contrato">Orçamento</option>
+              <option value="evento">Evento</option>
+              <option value="entrega">Entrega</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="f-tipo">Tipo de trabalho</label>
+          <input type="text" id="f-tipo" placeholder="Ex: Cobertura Fotográfica">
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="f-data">Data do evento</label>
+            <input type="date" id="f-data">
+          </div>
+          <div class="field">
+            <label for="f-horario">Horário</label>
+            <input type="text" id="f-horario" placeholder="14:30">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="f-local">Local</label>
+          <input type="text" id="f-local">
+        </div>
+
+        <hr class="job-divider">
+        <div class="job-section-label">Pacotes (valores independentes — não são somados)</div>
+        <div id="pkg-holder"></div>
+        <button type="button" class="link-btn" id="btn-add-pkg">+ adicionar pacote</button>
+
+        <hr class="job-divider">
+        <div class="field-row">
+          <div class="field">
+            <label for="f-prazo">Prazo de entrega (dias úteis)</label>
+            <input type="text" id="f-prazo" value="7">
+          </div>
+          <div class="field">
+            <label for="f-fotos">Fotos aguardando curadoria</label>
+            <input type="text" id="f-fotos" value="0">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="f-notas">Notas</label>
+          <textarea id="f-notas"></textarea>
+        </div>
+
+        <hr class="job-divider">
+        <div class="job-section-label">Termos e condições (impresso no orçamento)</div>
+        <div class="field">
+          <textarea id="f-termos" style="min-height:110px"></textarea>
+        </div>
+
+        <div class="status-msg" id="status-job"></div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-danger" id="btn-excluir-job" style="display:none">Excluir trabalho</button>
+      <button type="button" class="btn-ghost" id="btn-pdf-job">Gerar PDF</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn-secondary" id="btn-cancelar-job">Cancelar</button>
+      <button type="submit" form="form-job" id="btn-salvar-job">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+  import { parseMoney, fmtMoney, fmtDate, STAGE_LABELS, DEFAULT_TERMOS } from './js/utils.js?v=5';
+
+  // --- Sessão + tenant ---
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  let tenant;
+  try {
+    const profile = await ensureProfileAndTenant(session.user);
+    tenant = profile.tenants;
+    if (!isTenantActiveNow(tenant)) window.location.href = 'login.html';
+    else if (!tenant.onboarding_completo) window.location.href = 'onboarding.html';
+  } catch (err) {
+    console.error(err);
+    window.location.href = 'login.html';
+  }
+
+  document.getElementById('btn-logout').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  let clientesCache = [];
+  let editandoId = null;
+  let pkgSeq = 0;
+
+  const modal = document.getElementById('modal-job');
+  const areaLista = document.getElementById('area-lista');
+  const pkgHolder = document.getElementById('pkg-holder');
+  const statusEl = document.getElementById('status-job');
+
+  const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  function mesAnoLabel(mk) {
+    if (!mk) return 'sem data';
+    const [y, m] = mk.split('-');
+    return `${MESES[parseInt(m, 10) - 1]} ${y}`;
+  }
+
+  // --- Quadro do Pipeline (Orçamento / Evento / Avulsos, agrupado por mês) ---
+  async function carregarLista() {
+    const [{ data: jobs, error }, { data: avulsos }] = await Promise.all([
+      supabase.from('jobs').select('id, tipo_trabalho, data_evento, stage, created_at, clients(nome)').in('stage', ['contrato', 'evento']),
+      supabase.from('eventos').select('id, titulo, data, horario, notas').order('data', { ascending: true })
+    ]);
+
+    if (error) {
+      console.error(error);
+      areaLista.innerHTML = `<div class="empty-state">Não foi possível carregar o pipeline.</div>`;
+      return;
+    }
+
+    const ordenar = (lista, dataKey) => lista.slice().sort((a, b) => {
+      const da = a[dataKey] || '9999-99-99';
+      const db_ = b[dataKey] || '9999-99-99';
+      if (da !== db_) return da < db_ ? -1 : 1;
+      return (a.created_at || '') < (b.created_at || '') ? -1 : 1;
+    });
+
+    function renderColuna(titulo, itens) {
+      itens = ordenar(itens, 'data_evento');
+      let html = '';
+      let lastMonth = '__inicio__';
+      itens.forEach(j => {
+        const mk = j.data_evento ? j.data_evento.slice(0, 7) : '';
+        if (mk !== lastMonth) {
+          html += `<div class="month-sep">${mesAnoLabel(mk)}</div>`;
+          lastMonth = mk;
+        }
+        const sub = [j.tipo_trabalho, j.data_evento ? fmtDate(j.data_evento) : null].filter(Boolean).join(' · ');
+        html += `
+          <div class="board-card" data-tipo="job" data-id="${j.id}">
+            <div class="client">${j.clients ? escapeHtml(j.clients.nome) : '—'}</div>
+            ${sub ? `<div class="sub">${escapeHtml(sub)}</div>` : ''}
+          </div>`;
+      });
+      return `
+        <div class="board-col">
+          <div class="board-head"><span class="label">${titulo}</span><span class="count">${itens.length}</span></div>
+          <div class="board-body">${html || '<div style="color:var(--ink-faint);font-size:13px;padding:8px 4px;">Nenhum trabalho nessa etapa.</div>'}</div>
+        </div>`;
+    }
+
+    function renderColunaAvulsos(itens) {
+      itens = ordenar(itens, 'data');
+      let html = '';
+      let lastMonth = '__inicio__';
+      itens.forEach(e => {
+        const mk = e.data ? e.data.slice(0, 7) : '';
+        if (mk !== lastMonth) {
+          html += `<div class="month-sep">${mesAnoLabel(mk)}</div>`;
+          lastMonth = mk;
+        }
+        const sub = [e.data ? fmtDate(e.data) : null, e.horario].filter(Boolean).join(' · ');
+        html += `
+          <div class="board-card" data-tipo="evento" data-id="${e.id}">
+            <div class="client">${escapeHtml(e.titulo)}</div>
+            ${sub ? `<div class="sub">${escapeHtml(sub)}</div>` : ''}
+          </div>`;
+      });
+      return `
+        <div class="board-col">
+          <div class="board-head"><span class="label">Avulsos</span><span class="count">${itens.length}</span></div>
+          <div class="board-body">${html || '<div style="color:var(--ink-faint);font-size:13px;padding:8px 4px;">Nenhum evento avulso.</div>'}</div>
+        </div>`;
+    }
+
+    const contratos = (jobs || []).filter(j => j.stage === 'contrato');
+    const eventos = (jobs || []).filter(j => j.stage === 'evento');
+
+    areaLista.innerHTML = `<div class="board-grid">${renderColuna('Orçamento', contratos)}${renderColuna('Evento', eventos)}${renderColunaAvulsos(avulsos || [])}</div>`;
+
+    areaLista.querySelectorAll('.board-card').forEach(card => {
+      card.addEventListener('click', () => {
+        if (card.dataset.tipo === 'evento') {
+          window.location.href = 'agenda.html'; // eventos avulsos se editam na Agenda
+        } else {
+          abrirModal(card.dataset.id);
+        }
+      });
+    });
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // --- Linhas de pacote ---
+  function addPkgRow(data = {}) {
+    const id = 'pkg' + (++pkgSeq);
+    const isFoto = data.is_foto !== undefined ? data.is_foto : true;
+    const isVideo = data.is_video || false;
+
+    const row = document.createElement('div');
+    row.className = 'pkg-row';
+    row.dataset.pkgId = id;
+    row.innerHTML = `
+      <div class="row1">
+        <input type="text" class="pkg-nome" placeholder="nome do pacote" value="${data.nome ? escapeHtml(data.nome) : ''}">
+        <input type="text" class="pkg-valor" placeholder="valor R$" value="${data.valor ? String(data.valor).replace('.', ',') : ''}">
+        <button type="button" class="pkg-remove" title="Remover pacote">×</button>
+      </div>
+      <div class="pkg-toggle">
+        <label><input type="checkbox" class="pkg-is-foto" ${isFoto ? 'checked' : ''}> Fotografia</label>
+        <label><input type="checkbox" class="pkg-is-video" ${isVideo ? 'checked' : ''}> Filmagem</label>
+      </div>
+      <div class="pkg-row2">
+        <input type="text" class="pkg-tempo" placeholder="tempo de captação" value="${data.tempo ? escapeHtml(data.tempo) : ''}">
+        <input type="text" class="pkg-qtd-fotos pkg-cond-foto" placeholder="qtd. de fotos" value="${data.qtd_fotos ? escapeHtml(data.qtd_fotos) : ''}">
+        <input type="text" class="pkg-duracao-video pkg-cond-video" placeholder="duração do vídeo" value="${data.duracao_video ? escapeHtml(data.duracao_video) : ''}">
+      </div>
+      <div class="pkg-itens-label">Itens inclusos / observações (um por linha)</div>
+      <textarea class="pkg-itens" placeholder="ex: 1 álbum 20x30&#10;100 fotos editadas">${data.itens ? escapeHtml(data.itens) : ''}</textarea>
+      <div class="pkg-preview">À vista: R$ 0,00   ·   12x (+15%): R$ 0,00 — 12x de R$ 0,00</div>
+    `;
+    pkgHolder.appendChild(row);
+
+    const valorInput = row.querySelector('.pkg-valor');
+    const preview = row.querySelector('.pkg-preview');
+    const chkFoto = row.querySelector('.pkg-is-foto');
+    const chkVideo = row.querySelector('.pkg-is-video');
+    const condFoto = row.querySelector('.pkg-cond-foto');
+    const condVideo = row.querySelector('.pkg-cond-video');
+
+    function updatePreview() {
+      const v = parseMoney(valorInput.value);
+      const total12x = v * 1.15;
+      const parcela = total12x / 12;
+      preview.textContent = `À vista: ${fmtMoney(v)}   ·   12x (+15%): ${fmtMoney(total12x)} — 12x de ${fmtMoney(parcela)}`;
+    }
+    function updateToggle() {
+      condFoto.style.display = chkFoto.checked ? '' : 'none';
+      condVideo.style.display = chkVideo.checked ? '' : 'none';
+    }
+
+    valorInput.addEventListener('input', updatePreview);
+    chkFoto.addEventListener('change', updateToggle);
+    chkVideo.addEventListener('change', updateToggle);
+    row.querySelector('.pkg-remove').addEventListener('click', () => row.remove());
+
+    updatePreview();
+    updateToggle();
+  }
+
+  document.getElementById('btn-add-pkg').addEventListener('click', () => addPkgRow());
+
+  function collectPackages() {
+    const pkgs = [];
+    pkgHolder.querySelectorAll('.pkg-row').forEach((row, idx) => {
+      const nome = row.querySelector('.pkg-nome').value.trim();
+      if (!nome) return;
+      pkgs.push({
+        nome,
+        valor: parseMoney(row.querySelector('.pkg-valor').value),
+        tempo: row.querySelector('.pkg-tempo').value.trim() || null,
+        qtd_fotos: row.querySelector('.pkg-qtd-fotos').value.trim() || null,
+        duracao_video: row.querySelector('.pkg-duracao-video').value.trim() || null,
+        itens: row.querySelector('.pkg-itens').value.trim() || null,
+        is_foto: row.querySelector('.pkg-is-foto').checked,
+        is_video: row.querySelector('.pkg-is-video').checked,
+        ordem: idx,
+      });
+    });
+    return pkgs;
+  }
+
+  // --- Abrir modal (novo ou edição) ---
+  async function abrirModal(jobId = null) {
+    editandoId = jobId;
+    statusEl.textContent = '';
+    statusEl.className = 'status-msg';
+    pkgHolder.innerHTML = '';
+
+    const { data: clients } = await supabase.from('clients').select('id, nome').order('nome');
+    clientesCache = clients || [];
+    const selectCliente = document.getElementById('f-cliente');
+    selectCliente.innerHTML = clientesCache.length
+      ? clientesCache.map(c => `<option value="${c.id}">${escapeHtml(c.nome)}</option>`).join('')
+      : `<option value="">Cadastre um cliente primeiro</option>`;
+
+    if (jobId) {
+      document.getElementById('modal-titulo').textContent = 'Editar trabalho';
+      document.getElementById('btn-excluir-job').style.display = '';
+
+      const { data: job } = await supabase.from('jobs').select('*').eq('id', jobId).single();
+      const { data: pkgs } = await supabase.from('packages').select('*').eq('job_id', jobId).order('ordem');
+
+      selectCliente.value = job.client_id || '';
+      document.getElementById('f-etapa').value = job.stage;
+      document.getElementById('f-tipo').value = job.tipo_trabalho || '';
+      document.getElementById('f-data').value = job.data_evento || '';
+      document.getElementById('f-horario').value = job.horario || '';
+      document.getElementById('f-local').value = job.local || '';
+      document.getElementById('f-prazo').value = job.prazo_entrega ?? 7;
+      document.getElementById('f-fotos').value = job.fotos_pendentes ?? 0;
+      document.getElementById('f-notas').value = job.notas || '';
+      document.getElementById('f-termos').value = job.termos || DEFAULT_TERMOS;
+
+      if (pkgs && pkgs.length) pkgs.forEach(p => addPkgRow(p));
+      else addPkgRow();
+    } else {
+      document.getElementById('modal-titulo').textContent = 'Novo trabalho';
+      document.getElementById('btn-excluir-job').style.display = 'none';
+      document.getElementById('f-etapa').value = 'contrato';
+      document.getElementById('f-tipo').value = '';
+      document.getElementById('f-data').value = '';
+      document.getElementById('f-horario').value = '';
+      document.getElementById('f-local').value = '';
+      document.getElementById('f-prazo').value = '7';
+      document.getElementById('f-fotos').value = '0';
+      document.getElementById('f-notas').value = '';
+      document.getElementById('f-termos').value = DEFAULT_TERMOS;
+      addPkgRow();
+    }
+
+    modal.style.display = 'flex';
+  }
+
+  function fecharModal() { modal.style.display = 'none'; }
+
+  document.getElementById('btn-novo').addEventListener('click', () => abrirModal(null));
+  document.getElementById('btn-cancelar-job').addEventListener('click', fecharModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) fecharModal(); });
+
+  function collectJobData() {
+    const clientId = document.getElementById('f-cliente').value;
+    if (!clientId) {
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Cadastre e selecione um cliente antes de continuar.';
+      return null;
+    }
+    return {
+      client_id: clientId,
+      stage: document.getElementById('f-etapa').value,
+      tipo_trabalho: document.getElementById('f-tipo').value.trim() || null,
+      data_evento: document.getElementById('f-data').value || null,
+      horario: document.getElementById('f-horario').value.trim() || null,
+      local: document.getElementById('f-local').value.trim() || null,
+      forma_pagamento: 'avista',
+      prazo_entrega: parseInt(document.getElementById('f-prazo').value, 10) || 7,
+      fotos_pendentes: parseInt(document.getElementById('f-fotos').value, 10) || 0,
+      notas: document.getElementById('f-notas').value.trim() || null,
+      termos: document.getElementById('f-termos').value.trim() || DEFAULT_TERMOS,
+    };
+  }
+
+  async function salvarJobEPacotes(jobData, pkgs) {
+    let jobId = editandoId;
+    if (jobId) {
+      const { error } = await supabase.from('jobs').update(jobData).eq('id', jobId);
+      if (error) throw error;
+    } else {
+      const { data, error } = await supabase.from('jobs').insert({ ...jobData, tenant_id: tenant.id }).select().single();
+      if (error) throw error;
+      jobId = data.id;
+    }
+    await supabase.from('packages').delete().eq('job_id', jobId);
+    if (pkgs.length) {
+      const { error: pkgError } = await supabase.from('packages').insert(pkgs.map(p => ({ ...p, job_id: jobId })));
+      if (pkgError) throw pkgError;
+    }
+    return jobId;
+  }
+
+  document.getElementById('form-job').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const jobData = collectJobData();
+    if (!jobData) return;
+    const pkgs = collectPackages();
+
+    try {
+      await salvarJobEPacotes(jobData, pkgs);
+      fecharModal();
+      carregarLista();
+    } catch (err) {
+      console.error(err);
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Não foi possível salvar. Tente novamente.';
+    }
+  });
+
+  document.getElementById('btn-excluir-job').addEventListener('click', async () => {
+    if (!editandoId) return;
+    if (!confirm('Excluir este trabalho do pipeline?')) return;
+    const { error } = await supabase.from('jobs').delete().eq('id', editandoId);
+    if (error) { console.error(error); alert('Não foi possível excluir.'); return; }
+    fecharModal();
+    carregarLista();
+  });
+
+  document.getElementById('btn-pdf-job').addEventListener('click', async () => {
+    const jobData = collectJobData();
+    if (!jobData) return;
+    const pkgs = collectPackages();
+    if (!pkgs.length) {
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Adicione ao menos um pacote para gerar o PDF.';
+      return;
+    }
+
+    try {
+      await salvarJobEPacotes(jobData, pkgs);
+    } catch (err) {
+      console.error(err);
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Não foi possível salvar antes de gerar o PDF.';
+      return;
+    }
+
+    const cliente = clientesCache.find(c => c.id === jobData.client_id);
+    gerarPdfOrcamento(cliente, jobData, pkgs, tenant);
+    carregarLista();
+  });
+
+  function gerarPdfOrcamento(cliente, job, pkgs, studio) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const margin = 18;
+    let y = 20;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text(studio.business_name || 'Orçamento', margin, y);
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    const contato = [studio.contact_email, studio.contact_phone].filter(Boolean).join('  ·  ');
+    if (contato) { doc.text(contato, margin, y); y += 8; } else { y += 4; }
+
+    doc.setDrawColor(227, 222, 236);
+    doc.line(margin, y, 210 - margin, y); y += 8;
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+    doc.text('Cliente', margin, y); y += 6;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+    doc.text(cliente ? cliente.nome : '—', margin, y); y += 5;
+    if (job.tipo_trabalho) { doc.text(`Tipo: ${job.tipo_trabalho}`, margin, y); y += 5; }
+    if (job.data_evento) { doc.text(`Data: ${fmtDate(job.data_evento)}${job.horario ? '  ·  ' + job.horario : ''}`, margin, y); y += 5; }
+    if (job.local) { doc.text(`Local: ${job.local}`, margin, y); y += 5; }
+    y += 4;
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+    doc.text('Pacotes', margin, y); y += 7;
+
+    pkgs.forEach(p => {
+      if (y > 260) { doc.addPage(); y = 20; }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5);
+      doc.text(p.nome, margin, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(fmtMoney(p.valor), 210 - margin, y, { align: 'right' });
+      y += 5;
+
+      doc.setFontSize(9);
+      const total12x = p.valor * 1.15;
+      doc.text(`À vista: ${fmtMoney(p.valor)}   ·   12x (+15%): ${fmtMoney(total12x)} — 12x de ${fmtMoney(total12x / 12)}`, margin, y);
+      y += 5;
+
+      if (p.itens) {
+        const linhas = doc.splitTextToSize(p.itens, 210 - margin * 2);
+        doc.text(linhas, margin, y);
+        y += linhas.length * 4.5;
+      }
+      y += 4;
+    });
+
+    y += 2;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+    doc.text('Termos e condições', margin, y); y += 6;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+    const termoLinhas = doc.splitTextToSize(job.termos, 210 - margin * 2);
+    doc.text(termoLinhas, margin, y);
+
+    const nomeArquivo = `orcamento-${(cliente ? cliente.nome : 'cliente').toLowerCase().replace(/\s+/g, '-')}.pdf`;
+    doc.save(nomeArquivo);
+  }
+
+  carregarLista();
+</script>
+
+</body>
+</html>

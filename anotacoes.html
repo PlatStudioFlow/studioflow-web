@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anotações — StudioFlow</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+</head>
+<body class="app">
+<script type="module" src="js/mobile-nav.js?v=1"></script>
+<script type="module" src="js/search.js?v=1"></script>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="mark"><img src="assets/logo.png" alt="StudioFlow" class="icon"><div class="wordmark">Studio<span>Flow</span></div></div>
+    <div class="tagline">Gestão para criativos</div>
+    <nav>
+      <a href="dashboard.html" class="nav-item">Dashboard</a>
+      <a href="clientes.html" class="nav-item">Clientes</a>
+      <a href="orcamentos.html" class="nav-item">Orçamentos</a>
+      <a href="pipeline.html" class="nav-item">Pipeline</a>
+      <a href="agenda.html" class="nav-item">Agenda</a>
+      <a href="entregas.html" class="nav-item">Entregas</a>
+      <a href="financeiro.html" class="nav-item">Financeiro</a>
+      <a href="conteudo.html" class="nav-item">Conteúdo</a>
+      <a href="freelancer.html" class="nav-item">Freelancer</a>
+      <a href="anotacoes.html" class="nav-item active">Anotações</a>
+      <a href="tarefas.html" class="nav-item">Tarefas</a>
+      <a href="modelos.html" class="nav-item">Modelos de Pacote</a>
+    </nav>
+    <div class="logout">
+      <a href="configuracoes.html" class="nav-item">Configurações</a>
+      <a href="#" class="nav-item" id="btn-logout">Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1 style="font-size:26px;font-weight:800;text-transform:uppercase;margin:0;">Anotações</h1>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin:4px 0 0;">Um bloco separado para cada anotação — pagamentos, tarefas, lembretes soltos.</p>
+      </div>
+      <button class="btn-primary" id="btn-novo">+ Nova anotação</button>
+    </div>
+    <div id="area-notas"><div class="empty-state">Carregando...</div></div>
+  </main>
+</div>
+
+<div class="modal-overlay form-modal" id="modal-nota" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h2 id="modal-titulo-nota">Nova anotação</h2></div>
+    <div class="modal-body">
+      <form id="form-nota">
+        <div class="field">
+          <label for="n-titulo">Título</label>
+          <input type="text" id="n-titulo">
+        </div>
+        <div class="field">
+          <label for="n-conteudo">Conteúdo</label>
+          <textarea id="n-conteudo" style="min-height:150px"></textarea>
+        </div>
+        <div class="field">
+          <label>Cor</label>
+          <div class="cor-picker" id="cor-picker"></div>
+        </div>
+        <div class="status-msg" id="status-nota"></div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-danger" id="btn-excluir-nota" style="display:none">Excluir</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn-secondary" id="btn-cancelar-nota">Cancelar</button>
+      <button type="submit" form="form-nota" id="btn-salvar-nota">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+  let tenant;
+  try {
+    const profile = await ensureProfileAndTenant(session.user);
+    tenant = profile.tenants;
+    if (!isTenantActiveNow(tenant)) window.location.href = 'login.html';
+    else if (!tenant.onboarding_completo) window.location.href = 'onboarding.html';
+  } catch (err) { console.error(err); window.location.href = 'login.html'; }
+
+  document.getElementById('btn-logout').addEventListener('click', async (e) => {
+    e.preventDefault(); await supabase.auth.signOut(); window.location.href = 'login.html';
+  });
+
+  function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+  const CORES = [
+    ['Padrão', '#FFFFFF'], ['Amarelo', '#FFF6D9'], ['Azul', '#DCEBFB'],
+    ['Verde', '#DFF3E3'], ['Rosa', '#FBE1EA'], ['Roxo', '#EFE1FB'],
+  ];
+
+  const pickerEl = document.getElementById('cor-picker');
+  pickerEl.innerHTML = CORES.map(([nome, hex]) => `<div class="cor-swatch" data-hex="${hex}" title="${nome}" style="background:${hex}"></div>`).join('');
+  let corAtual = '#FFFFFF';
+  function marcarCorSelecionada() {
+    pickerEl.querySelectorAll('.cor-swatch').forEach(sw => sw.classList.toggle('selected', sw.dataset.hex === corAtual));
+  }
+  pickerEl.querySelectorAll('.cor-swatch').forEach(sw => {
+    sw.addEventListener('click', () => { corAtual = sw.dataset.hex; marcarCorSelecionada(); });
+  });
+
+  function fmtDataHora(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  const areaNotas = document.getElementById('area-notas');
+  const modal = document.getElementById('modal-nota');
+  const statusEl = document.getElementById('status-nota');
+  let editandoId = null;
+
+  async function carregarNotas() {
+    const { data: notas, error } = await supabase.from('notas').select('*').order('atualizado_em', { ascending: false });
+    if (error) { console.error(error); areaNotas.innerHTML = `<div class="empty-state">Não foi possível carregar.</div>`; return; }
+    if (!notas || !notas.length) {
+      areaNotas.innerHTML = `<div class="empty-state">Nenhuma anotação ainda. Crie a primeira com o botão acima.</div>`;
+      return;
+    }
+    areaNotas.innerHTML = `<div class="notas-grid">${notas.map(n => {
+      const cor = n.cor || '#FFFFFF';
+      let preview = (n.conteudo || '');
+      if (preview.length > 260) preview = preview.slice(0, 260).trimEnd() + '…';
+      return `
+        <div class="nota-card" data-id="${n.id}" style="background:${cor};border-color:${cor === '#FFFFFF' ? 'var(--line)' : 'transparent'}">
+          ${n.titulo ? `<div class="titulo">${escapeHtml(n.titulo)}</div>` : ''}
+          <div class="conteudo">${escapeHtml(preview)}</div>
+          <div class="quando">${fmtDataHora(n.atualizado_em)}</div>
+        </div>`;
+    }).join('')}</div>`;
+
+    areaNotas.querySelectorAll('.nota-card').forEach(card => {
+      card.addEventListener('click', () => abrirModal(card.dataset.id));
+    });
+  }
+
+  async function abrirModal(id = null) {
+    editandoId = id;
+    statusEl.textContent = ''; statusEl.className = 'status-msg';
+    document.getElementById('modal-titulo-nota').textContent = id ? 'Editar anotação' : 'Nova anotação';
+    document.getElementById('btn-excluir-nota').style.display = id ? '' : 'none';
+
+    if (id) {
+      const { data: n } = await supabase.from('notas').select('*').eq('id', id).single();
+      document.getElementById('n-titulo').value = n.titulo || '';
+      document.getElementById('n-conteudo').value = n.conteudo || '';
+      corAtual = n.cor || '#FFFFFF';
+    } else {
+      document.getElementById('n-titulo').value = '';
+      document.getElementById('n-conteudo').value = '';
+      corAtual = '#FFFFFF';
+    }
+    marcarCorSelecionada();
+    modal.style.display = 'flex';
+    document.getElementById('n-titulo').focus();
+  }
+
+  function fecharModal() { modal.style.display = 'none'; }
+
+  document.getElementById('btn-novo').addEventListener('click', () => abrirModal(null));
+  document.getElementById('btn-cancelar-nota').addEventListener('click', fecharModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) fecharModal(); });
+
+  document.getElementById('form-nota').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const titulo = document.getElementById('n-titulo').value.trim();
+    const conteudo = document.getElementById('n-conteudo').value.trim();
+    if (!titulo && !conteudo) { statusEl.className = 'status-msg status-erro'; statusEl.textContent = 'Escreva algo antes de salvar.'; return; }
+
+    const payload = { titulo, conteudo, cor: corAtual, atualizado_em: new Date().toISOString() };
+    let error;
+    if (editandoId) {
+      ({ error } = await supabase.from('notas').update(payload).eq('id', editandoId));
+    } else {
+      ({ error } = await supabase.from('notas').insert({ ...payload, tenant_id: tenant.id }));
+    }
+    if (error) { console.error(error); statusEl.className = 'status-msg status-erro'; statusEl.textContent = 'Não foi possível salvar.'; return; }
+    fecharModal();
+    carregarNotas();
+  });
+
+  document.getElementById('btn-excluir-nota').addEventListener('click', async () => {
+    if (!editandoId || !confirm('Excluir esta anotação?')) return;
+    await supabase.from('notas').delete().eq('id', editandoId);
+    fecharModal();
+    carregarNotas();
+  });
+
+  carregarNotas();
+</script>
+</body>
+</html>

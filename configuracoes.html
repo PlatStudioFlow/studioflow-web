@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Configurações — StudioFlow</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+<style>
+  .settings-card {
+    background: var(--card-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 28px 30px; max-width: 520px;
+  }
+  .settings-card .lead { color: var(--ink-soft); font-size: 13.5px; margin: -4px 0 22px; }
+  .logo-drop {
+    border: 1.5px dashed var(--line); border-radius: 6px; padding: 18px; text-align: center;
+    cursor: pointer; background: var(--bg); transition: border-color .15s ease;
+  }
+  .logo-drop:hover { border-color: var(--blue); }
+  .logo-drop img { max-width: 120px; max-height: 80px; display: block; margin: 0 auto 8px; }
+  .logo-drop .hint { font-size: 12.5px; color: var(--ink-soft); }
+  .logo-drop input[type="file"] { display: none; }
+</style>
+</head>
+<body class="app">
+<script type="module" src="js/mobile-nav.js?v=1"></script>
+<script type="module" src="js/search.js?v=1"></script>
+
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="mark">
+      <img src="assets/logo.png" alt="StudioFlow" class="icon">
+      <div class="wordmark">Studio<span>Flow</span></div>
+    </div>
+    <div class="tagline">Gestão para criativos</div>
+
+    <nav>
+      <a href="dashboard.html" class="nav-item">Dashboard</a>
+      <a href="clientes.html" class="nav-item">Clientes</a>
+      <a href="orcamentos.html" class="nav-item">Orçamentos</a>
+      <a href="pipeline.html" class="nav-item">Pipeline</a>
+      <a href="agenda.html" class="nav-item">Agenda</a>
+      <a href="entregas.html" class="nav-item">Entregas</a>
+      <a href="financeiro.html" class="nav-item">Financeiro</a>
+      <a href="conteudo.html" class="nav-item">Conteúdo</a>
+      <a href="freelancer.html" class="nav-item">Freelancer</a>
+      <a href="anotacoes.html" class="nav-item">Anotações</a>
+      <a href="tarefas.html" class="nav-item">Tarefas</a>
+      <a href="modelos.html" class="nav-item">Modelos de Pacote</a>
+    </nav>
+
+    <div class="logout">
+      <a href="configuracoes.html" class="nav-item active">Configurações</a>
+      <a href="#" class="nav-item" id="btn-logout">Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1 style="font-size:26px;font-weight:800;text-transform:uppercase;margin:0;">Configurações</h1>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin:4px 0 0;">Dados do seu estúdio, usados no cabeçalho dos orçamentos em PDF.</p>
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <form id="form-config">
+        <div class="field">
+          <label for="f-nome">Nome do estúdio</label>
+          <input type="text" id="f-nome" required>
+        </div>
+        <div class="field">
+          <label for="f-instagram">Instagram</label>
+          <input type="text" id="f-instagram" placeholder="@seu.estudio">
+        </div>
+        <div class="field">
+          <label for="f-telefone">Telefone / WhatsApp</label>
+          <input type="text" id="f-telefone">
+        </div>
+        <div class="field">
+          <label for="f-email">E-mail de contato</label>
+          <input type="email" id="f-email">
+        </div>
+        <div class="field">
+          <label>Logo (PNG)</label>
+          <label class="logo-drop" id="logo-drop">
+            <img id="logo-preview" style="display:none">
+            <div class="hint" id="logo-hint">Clique para trocar o logo</div>
+            <input type="file" id="logo-file" accept="image/png">
+          </label>
+        </div>
+        <div class="status-msg" id="status-config"></div>
+        <button type="submit" style="margin-top:16px">Salvar alterações</button>
+      </form>
+    </div>
+  </main>
+
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  let tenant;
+  try {
+    const profile = await ensureProfileAndTenant(session.user);
+    tenant = profile.tenants;
+    if (!isTenantActiveNow(tenant)) window.location.href = 'login.html';
+  } catch (err) {
+    console.error(err);
+    window.location.href = 'login.html';
+  }
+
+  document.getElementById('btn-logout').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  document.getElementById('f-nome').value = tenant.business_name || '';
+  document.getElementById('f-instagram').value = tenant.instagram || '';
+  document.getElementById('f-telefone').value = tenant.contact_phone || '';
+  document.getElementById('f-email').value = tenant.contact_email || '';
+  if (tenant.logo_url) {
+    const img = document.getElementById('logo-preview');
+    img.src = tenant.logo_url;
+    img.style.display = 'block';
+    document.getElementById('logo-hint').textContent = 'Clique para trocar o logo';
+  }
+
+  const fileInput = document.getElementById('logo-file');
+  const preview = document.getElementById('logo-preview');
+  const hint = document.getElementById('logo-hint');
+  const statusEl = document.getElementById('status-config');
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    if (file.type !== 'image/png') {
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'O logo precisa ser um arquivo PNG.';
+      fileInput.value = '';
+      return;
+    }
+    statusEl.textContent = ''; statusEl.className = 'status-msg';
+    const reader = new FileReader();
+    reader.onload = (e) => { preview.src = e.target.result; preview.style.display = 'block'; hint.textContent = file.name; };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('form-config').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    statusEl.className = 'status-msg';
+    statusEl.textContent = 'Salvando...';
+
+    let logo_url = tenant.logo_url || null;
+    const file = fileInput.files[0];
+
+    try {
+      if (file) {
+        const path = `${tenant.id}/logo.png`;
+        const { error: uploadError } = await supabase.storage.from('logos').upload(path, file, { upsert: true, contentType: 'image/png' });
+        if (uploadError) throw uploadError;
+        const { data: publicUrlData } = supabase.storage.from('logos').getPublicUrl(path);
+        logo_url = publicUrlData.publicUrl + '?t=' + Date.now();
+      }
+
+      const { error } = await supabase.from('tenants').update({
+        business_name: document.getElementById('f-nome').value.trim(),
+        instagram: document.getElementById('f-instagram').value.trim() || null,
+        contact_phone: document.getElementById('f-telefone').value.trim() || null,
+        contact_email: document.getElementById('f-email').value.trim() || null,
+        logo_url,
+      }).eq('id', tenant.id);
+
+      if (error) throw error;
+
+      statusEl.className = 'status-msg status-ok';
+      statusEl.textContent = 'Configurações salvas.';
+    } catch (err) {
+      console.error(err);
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Não foi possível salvar. Tente novamente.';
+    }
+  });
+</script>
+
+</body>
+</html>
