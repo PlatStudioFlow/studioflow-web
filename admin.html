@@ -166,8 +166,31 @@
         btn.addEventListener('click', async () => {
           const t = tenantsCache.find(x => x.id === id);
           if (!confirm(`Excluir "${t.business_name}" e TODOS os dados dele (clientes, orçamentos, financeiro etc)? Essa ação não pode ser desfeita.`)) return;
-          const { error } = await supabase.from('tenants').delete().eq('id', id);
-          if (error) { console.error(error); alert('Não foi possível excluir.'); return; }
+
+          btn.disabled = true;
+          btn.textContent = 'Excluindo...';
+
+          const { data: sessionData } = await supabase.auth.getSession();
+          const accessToken = sessionData?.session?.access_token;
+
+          const { data, error } = await supabase.functions.invoke('excluir-usuario', {
+            body: { tenant_id: id },
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+
+          if (error) {
+            console.error(error);
+            alert('Não foi possível excluir.');
+            btn.disabled = false;
+            btn.textContent = 'Excluir';
+            return;
+          }
+
+          if (data?.warning) {
+            console.warn(data.warning, data.falharam);
+            alert('Estúdio excluído, mas houve um problema ao remover o login de acesso. Verifique os logs.');
+          }
+
           carregarTenants();
         });
       });
