@@ -48,7 +48,10 @@
   <main class="main">
     <div class="topbar">
       <h1>Dashboard</h1>
-      <div class="today" id="today"></div>
+      <div class="topbar-right">
+        <div class="today" id="today"></div>
+        <div class="subscription-badge" id="subscription-badge" style="display:none"></div>
+      </div>
     </div>
 
     <div class="stat-grid" id="stat-grid">
@@ -107,6 +110,24 @@
 
   document.getElementById('today').textContent = formatarDataLonga(new Date());
 
+  function renderAssinaturaBadge(tenantData) {
+    const el = document.getElementById('subscription-badge');
+    if (!tenantData.assinatura_vence_em || tenantData.status !== 'ativo') return;
+
+    const hojeISOLocal = new Date().toISOString().slice(0, 10);
+    const emSeteDias = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const dataFormatada = formatarDataCurta(tenantData.assinatura_vence_em);
+
+    el.style.display = 'inline-flex';
+    el.textContent = `Assinatura renova em ${dataFormatada}`;
+
+    if (tenantData.assinatura_vence_em <= hojeISOLocal) {
+      el.classList.add('subscription-badge--vencida');
+    } else if (tenantData.assinatura_vence_em <= emSeteDias) {
+      el.classList.add('subscription-badge--atencao');
+    }
+  }
+
   // --- Sessão + tenant ---
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) window.location.href = 'login.html';
@@ -117,6 +138,7 @@
     tenant = profile.tenants;
     if (!isTenantActiveNow(tenant)) { window.location.href = 'login.html'; }
     else if (!tenant.onboarding_completo) { window.location.href = 'onboarding.html'; }
+    else { renderAssinaturaBadge(tenant); }
   } catch (err) {
     console.error(err);
     window.location.href = 'login.html';
