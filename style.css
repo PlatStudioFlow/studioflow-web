@@ -161,6 +161,48 @@ button[type="submit"]:disabled { background: var(--line); color: var(--ink-soft)
 .switch a { color: var(--blue); text-decoration: none; font-weight: 700; }
 .switch a:hover { text-decoration: underline; }
 
+.contact-block {
+  text-align: center;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.contact-block .contact-label {
+  font-size: 12px;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.contact-block .contact-links {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.contact-block a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.contact-block a:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
 .status-msg {
   margin-top: 16px;
   padding: 11px 13px;
