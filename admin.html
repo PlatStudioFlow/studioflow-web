@@ -140,7 +140,21 @@
 
       row.querySelectorAll('[data-action="ativar"]').forEach(btn => {
         btn.addEventListener('click', async () => {
-          await supabase.from('tenants').update({ status: 'ativo', trial_ends_at: null }).eq('id', id);
+          btn.disabled = true;
+          const { data: sessionData } = await supabase.auth.getSession();
+          const accessToken = sessionData?.session?.access_token;
+
+          const { error } = await supabase.functions.invoke('ativar-manual', {
+            body: { tenant_id: id },
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+
+          if (error) {
+            console.error(error);
+            alert('Não foi possível ativar.');
+            btn.disabled = false;
+            return;
+          }
           carregarTenants();
         });
       });
