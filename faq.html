@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ajuda / FAQ — StudioFlow</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=5">
+<style>
+  /* Rótulo de seção da navegação, embutido para garantir renderização
+     independente do carregamento do style.css compartilhado. */
+  .nav-section-label {
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sidebar-text-dim);
+    padding: 16px 12px 4px;
+  }
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+<style>
+  .faq-list { max-width: 720px; }
+  .faq-item {
+    background: var(--card-bg); border: 1px solid var(--line); border-radius: 8px;
+    margin-bottom: 10px; overflow: hidden;
+  }
+  .faq-question {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 16px 20px; cursor: pointer; font-size: 14.5px; font-weight: 700; color: var(--ink);
+  }
+  .faq-question .arrow { font-size: 13px; color: var(--ink-faint); transition: transform 0.15s ease; flex-shrink: 0; }
+  .faq-item.open .faq-question .arrow { transform: rotate(180deg); }
+  .faq-answer {
+    display: none; padding: 0 20px 18px; font-size: 13.5px; line-height: 1.6; color: var(--ink-soft);
+  }
+  .faq-item.open .faq-answer { display: block; }
+  .faq-category { font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--blue); margin: 28px 0 12px; }
+  .faq-category:first-child { margin-top: 0; }
+</style>
+</head>
+<body class="app">
+<script type="module" src="js/mobile-nav.js?v=1"></script>
+<script type="module" src="js/search.js?v=1"></script>
+
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="mark">
+      <img src="assets/logo.png" alt="StudioFlow" class="icon">
+      <div class="wordmark">Studio<span>Flow</span></div>
+    </div>
+    <div class="tagline">Gestão para criativos</div>
+
+    <nav>
+      <a href="dashboard.html" class="nav-item">Dashboard</a>
+      <div class="nav-section-label">Operação</div>
+      <a href="pipeline.html" class="nav-item">Pipeline</a>
+      <a href="orcamentos.html" class="nav-item">Orçamentos</a>
+      <a href="agenda.html" class="nav-item">Agenda</a>
+      <a href="entregas.html" class="nav-item">Entregas</a>
+      <a href="clientes.html" class="nav-item">Clientes</a>
+      <div class="nav-section-label">Financeiro</div>
+      <a href="financeiro.html" class="nav-item">Financeiro</a>
+      <a href="freelancer.html" class="nav-item">Freelancer</a>
+      <div class="nav-section-label">Organização</div>
+      <a href="conteudo.html" class="nav-item">Conteúdo</a>
+      <a href="anotacoes.html" class="nav-item">Anotações</a>
+      <a href="tarefas.html" class="nav-item">Tarefas</a>
+      <a href="modelos.html" class="nav-item">Modelos de Pacote</a>
+      <a href="faq.html" class="nav-item active">Ajuda / FAQ</a>
+    </nav>
+
+    <div class="logout">
+      <a href="configuracoes.html" class="nav-item">Configurações</a>
+      <a href="#" class="nav-item" id="btn-logout">Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1 style="font-size:26px;font-weight:800;text-transform:uppercase;margin:0;">Ajuda / FAQ</h1>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin:4px 0 0;">Perguntas frequentes e soluções rápidas para problemas comuns.</p>
+      </div>
+    </div>
+
+    <div class="faq-list" id="faq-list">
+
+      <div class="faq-category">Conta e assinatura</div>
+
+      <div class="faq-item">
+        <div class="faq-question"><span>Como funciona a cobrança da assinatura?</span><span class="arrow">▾</span></div>
+        <div class="faq-answer">A assinatura é de R$29,90 por mês, cobrada automaticamente no cartão cadastrado. Enquanto a cobrança for confirmada com sucesso, seu acesso continua liberado sem interrupção.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question"><span>Como eu cancelo minha assinatura?</span><span class="arrow">▾</span></div>
+        <div class="faq-answer">Fale com a gente pelo WhatsApp ou Instagram (links no rodapé desta página) pedindo o cancelamento. Você continua com acesso normal até o fim do período que já foi pago — não é cortado na hora.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question"><span>Minha conta foi bloqueada, o que aconteceu?</span><span class="arrow">▾</span></div>
+        <div class="faq-answer">Isso acontece quando uma cobrança falha (cartão vencido, sem limite, etc.) ou quando o período de um teste grátis termina. Atualize os dados do cartão junto ao Asaas ou entre em contato com a gente para regularizar.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question"><span>Esqueci minha senha, como recupero?</span><span class="arrow">▾</span></div>
+        <div class="faq-answer">Na tela de login, use a opção de recuperação de senha informando o e-mail cadastrado. Se não encontrar essa opção, fale com o suporte que ajudamos a redefinir manualmente.</div>
+      </div>
+
+      <div class="faq-category">Usando o StudioFlow</div>
+
+      <div class="faq-item">
+        <div class="faq-question"><span>Qual a diferença entre Orçamentos e Pipeline?</span><span class="arrow">▾</span></div>
+        <div class="faq-answer">Orçamentos é onde você monta a proposta (pacotes, valores, condições) e gera o PDF para o cliente. Pipeline mostra o andamento de cada trabalho já fechado, em três estágios: Contrato → Evento → Entrega.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question"><span>Por que um trabalho não aparece na Agenda?</span><span class="arrow">▾</span></div>
+        <div class="faq-answer">A Agenda mostra apenas trabalhos já confirmados (estágio Evento ou Entrega no Pipeline), não orçamentos ainda em aberto. Assim ela fica limpa, só com compromissos que realmente vão acontecer.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question"><span>Consigo mudar o nome/logo que aparece nos PDFs?</span><span class="arrow">▾</span></div>
+        <div class="faq-answer">Sim. Vá em Configurações e atualize o nome do estúdio, Instagram, telefone e logo — essas informações aparecem no cabeçalho de todos os orçamentos gerados em PDF.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question"><span>O StudioFlow funciona no celular?</span><span class="arrow">▾</span></div>
+        <div class="faq-answer">Sim, o site é responsivo e funciona direto no navegador do celular. Você também pode adicionar como um app na tela inicial (no Safari: Compartilhar → Adicionar à Tela de Início).</div>
+      </div>
+
+      <div class="faq-category">Dados e segurança</div>
+
+      <div class="faq-item">
+        <div class="faq-question"><span>Meus dados ficam visíveis para outros estúdios?</span><span class="arrow">▾</span></div>
+        <div class="faq-answer">Não. Cada estúdio só tem acesso aos próprios dados — isso é garantido tecnicamente no banco de dados, não só na tela. Mais detalhes na nossa <a href="politica-privacidade.html">Política de Privacidade</a>.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question"><span>Vocês têm acesso ao número do meu cartão?</span><span class="arrow">▾</span></div>
+        <div class="faq-answer">Não. O pagamento é processado direto pelo Asaas — o StudioFlow nunca vê nem armazena dados de cartão.</div>
+      </div>
+
+    </div>
+
+    <div class="contact-block" style="max-width:720px">
+      <div class="contact-label">Não achou o que procurava?</div>
+      <div class="contact-links">
+        <a href="https://wa.me/5524992938680" target="_blank" rel="noopener">WhatsApp</a>
+        <a href="https://instagram.com/app.studioflow" target="_blank" rel="noopener">Instagram</a>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=6';
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  try {
+    const profile = await ensureProfileAndTenant(session.user);
+    if (!isTenantActiveNow(profile.tenants)) window.location.href = 'login.html';
+  } catch (err) {
+    console.error(err);
+    window.location.href = 'login.html';
+  }
+
+  document.getElementById('btn-logout').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  document.querySelectorAll('.faq-question').forEach(q => {
+    q.addEventListener('click', () => {
+      q.closest('.faq-item').classList.toggle('open');
+    });
+  });
+</script>
+
+</body>
+</html>
