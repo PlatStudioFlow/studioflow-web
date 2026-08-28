@@ -8,6 +8,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css?v=3">
+<style>
+  /* Rótulo de seção da navegação, embutido para garantir renderização
+     independente do carregamento do style.css compartilhado. */
+  .nav-section-label {
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sidebar-text-dim);
+    padding: 16px 12px 4px;
+  }
+</style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B0E1F">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -27,14 +39,17 @@
 
     <nav>
       <a href="dashboard.html" class="nav-item">Dashboard</a>
-      <a href="clientes.html" class="nav-item">Clientes</a>
-      <a href="orcamentos.html" class="nav-item active">Orçamentos</a>
+      <div class="nav-section-label">Operação</div>
       <a href="pipeline.html" class="nav-item">Pipeline</a>
+      <a href="orcamentos.html" class="nav-item active">Orçamentos</a>
       <a href="agenda.html" class="nav-item">Agenda</a>
       <a href="entregas.html" class="nav-item">Entregas</a>
+      <a href="clientes.html" class="nav-item">Clientes</a>
+      <div class="nav-section-label">Financeiro</div>
       <a href="financeiro.html" class="nav-item">Financeiro</a>
-      <a href="conteudo.html" class="nav-item">Conteúdo</a>
       <a href="freelancer.html" class="nav-item">Freelancer</a>
+      <div class="nav-section-label">Organização</div>
+      <a href="conteudo.html" class="nav-item">Conteúdo</a>
       <a href="anotacoes.html" class="nav-item">Anotações</a>
       <a href="tarefas.html" class="nav-item">Tarefas</a>
       <a href="modelos.html" class="nav-item">Modelos de Pacote</a>
