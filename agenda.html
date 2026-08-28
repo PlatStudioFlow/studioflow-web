@@ -8,6 +8,90 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css?v=5">
+<style>
+  /* CSS do calendário embutido diretamente aqui, independente do style.css externo */
+  .view-toggle {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .view-toggle-btn {
+    background: var(--card-bg);
+    border: none;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .view-toggle-btn + .view-toggle-btn { border-left: 1px solid var(--line); }
+  .view-toggle-btn.active { background: var(--blue); color: #fff; }
+
+  .calendar-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .calendar-mes-label { font-size: 16px; font-weight: 800; min-width: 160px; text-align: center; }
+
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+  .calendar-weekday {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    padding-bottom: 4px;
+  }
+  .calendar-cell {
+    background: var(--card-bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    min-height: 78px;
+    padding: 6px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .calendar-cell:hover { border-color: var(--blue); }
+  .calendar-cell.other-month { opacity: 0.35; }
+  .calendar-cell.today { border-color: var(--blue); border-width: 2px; }
+  .calendar-cell.selected { background: var(--surface2); }
+  .calendar-day-num { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+  .calendar-item {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: var(--surface2);
+    color: var(--ink-soft);
+  }
+  .calendar-item.tag-evento { background: #E7F0FB; color: var(--blue-dark); }
+  .calendar-item.tag-entrega { background: var(--ok-bg); color: var(--ok); }
+  .calendar-item.tag-avulso { background: var(--surface2); color: var(--ink-soft); }
+  .calendar-item-mais { font-size: 10px; color: var(--ink-faint); font-weight: 700; }
+
+  @media (max-width: 880px) {
+    .calendar-grid { gap: 3px; }
+    .calendar-cell { min-height: 52px; padding: 4px 3px; gap: 2px; }
+    .calendar-day-num { font-size: 11px; }
+    .calendar-item { font-size: 0; padding: 0; width: 6px; height: 6px; border-radius: 50%; }
+    .calendar-item-mais { font-size: 8.5px; }
+    .calendar-weekday { font-size: 9.5px; }
+    .calendar-mes-label { min-width: 0; font-size: 14px; }
+  }
+</style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B0E1F">
 </head>
