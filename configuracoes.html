@@ -115,6 +115,23 @@
       </form>
     </div>
 
+    <h2 class="section-title" style="margin-top:32px">Segurança</h2>
+    <div class="settings-card">
+      <p class="lead">Altere a senha usada para acessar sua conta.</p>
+      <form id="form-senha">
+        <div class="field">
+          <label for="nova-senha">Nova senha</label>
+          <input type="password" id="nova-senha" required minlength="6" placeholder="Mínimo 6 caracteres">
+        </div>
+        <div class="field">
+          <label for="confirmar-senha">Confirmar nova senha</label>
+          <input type="password" id="confirmar-senha" required minlength="6" placeholder="Repita a nova senha">
+        </div>
+        <div class="status-msg" id="status-senha"></div>
+        <button type="submit" id="btn-senha" style="margin-top:16px">Alterar senha</button>
+      </form>
+    </div>
+
     <h2 class="section-title" style="margin-top:32px">Suporte StudioFlow</h2>
     <div class="settings-card">
       <p style="font-size:13.5px;color:var(--ink-soft);margin:0 0 14px;">Dúvidas, pedidos de atualização ou problemas com a plataforma? Fale direto com a gente.</p>
@@ -149,6 +166,39 @@
     e.preventDefault();
     await supabase.auth.signOut();
     window.location.href = 'login.html';
+  });
+
+  document.getElementById('form-senha').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btnSenha = document.getElementById('btn-senha');
+    const statusSenha = document.getElementById('status-senha');
+    btnSenha.disabled = true;
+    statusSenha.className = 'status-msg';
+    statusSenha.textContent = '';
+
+    const novaSenha = document.getElementById('nova-senha').value;
+    const confirmarSenha = document.getElementById('confirmar-senha').value;
+
+    if (novaSenha !== confirmarSenha) {
+      statusSenha.className = 'status-msg status-erro';
+      statusSenha.textContent = 'As senhas não coincidem.';
+      btnSenha.disabled = false;
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: novaSenha });
+
+    if (error) {
+      statusSenha.className = 'status-msg status-erro';
+      statusSenha.textContent = 'Não foi possível alterar a senha. Tente novamente.';
+      btnSenha.disabled = false;
+      return;
+    }
+
+    statusSenha.className = 'status-msg status-ok';
+    statusSenha.textContent = 'Senha alterada com sucesso!';
+    document.getElementById('form-senha').reset();
+    btnSenha.disabled = false;
   });
 
   document.getElementById('f-nome').value = tenant.business_name || '';
