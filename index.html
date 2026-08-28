@@ -1,15 +1,303 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=login.html">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StudioFlow</title>
-  <script>
-    window.location.replace("login.html");
-  </script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudioFlow — Gestão para fotógrafos e criativos</title>
+<meta name="description" content="Do contrato à entrega: orçamentos em PDF, agenda, financeiro e pipeline de trabalhos num só lugar. R$29,90/mês.">
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0A0710">
+<style>
+  :root {
+    --sidebar: #0A0710;
+    --ink: #1C1626;
+    --ink-soft: #6B647A;
+    --ink-faint: #9791A3;
+    --blue: #2E86DE;
+    --blue-dark: #1B5FA8;
+    --blue-bright: #5DB0F0;
+    --line: #E3DEEC;
+    --card-bg: #FFFFFF;
+    --surface2: #F2EFF6;
+    --bg: #FAF9FC;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { visibility: hidden; }
+  html.pronto { visibility: visible; }
+  body { margin: 0; font-family: var(--font-body); color: var(--ink); background: var(--bg); }
+  a { color: inherit; }
+  img { max-width: 100%; display: block; }
+
+  /* ===== HEADER ===== */
+  .site-header {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 32px;
+    background: rgba(10,7,16,0.92);
+    backdrop-filter: blur(8px);
+  }
+  .site-header .mark { display: flex; align-items: center; gap: 10px; }
+  .site-header .mark img { width: 30px; height: 30px; border-radius: 7px; }
+  .site-header .wordmark { font-size: 17px; font-weight: 800; color: #fff; }
+  .site-header .wordmark span { color: var(--blue-bright); }
+  .site-header .nav-actions { display: flex; align-items: center; gap: 18px; }
+  .site-header .nav-actions a { font-size: 13.5px; font-weight: 700; color: #C9C2D6; text-decoration: none; }
+  .site-header .nav-actions a:hover { color: #fff; }
+  .btn-cta {
+    background: var(--blue); color: #fff !important; padding: 9px 18px; border-radius: 7px;
+    font-size: 13.5px; font-weight: 800; text-decoration: none; transition: background 0.15s ease;
+  }
+  .btn-cta:hover { background: var(--blue-dark); }
+
+  /* ===== HERO ===== */
+  .hero {
+    background: var(--sidebar);
+    color: #fff;
+    padding: 72px 32px 96px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-eyebrow {
+    display: inline-block; font-size: 11.5px; font-weight: 800; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--blue-bright); margin-bottom: 18px;
+  }
+  .hero h1 {
+    font-size: clamp(30px, 5vw, 50px); font-weight: 900; line-height: 1.12; margin: 0 auto 20px;
+    max-width: 780px; letter-spacing: -0.02em;
+  }
+  .hero h1 em { color: var(--blue-bright); font-style: normal; }
+  .hero p.lead {
+    font-size: 17px; color: #C9C2D6; max-width: 560px; margin: 0 auto 34px; line-height: 1.6;
+  }
+  .hero-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 64px; }
+  .btn-cta-lg {
+    background: var(--blue); color: #fff; padding: 14px 28px; border-radius: 8px;
+    font-size: 15px; font-weight: 800; text-decoration: none; transition: background 0.15s ease, transform 0.15s ease;
+  }
+  .btn-cta-lg:hover { background: var(--blue-dark); transform: translateY(-1px); }
+  .btn-ghost {
+    padding: 14px 24px; border-radius: 8px; font-size: 15px; font-weight: 700; text-decoration: none;
+    color: #fff; border: 1px solid rgba(255,255,255,0.25);
+  }
+  .btn-ghost:hover { border-color: rgba(255,255,255,0.5); }
+
+  /* ===== PIPELINE VISUAL (elemento de assinatura) ===== */
+  .pipeline-visual {
+    display: flex; align-items: center; justify-content: center; gap: 0;
+    max-width: 640px; margin: 0 auto; flex-wrap: wrap;
+  }
+  .pipeline-stage {
+    display: flex; flex-direction: column; align-items: center; gap: 10px; width: 150px;
+  }
+  .pipeline-stage .dot {
+    width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.06);
+    border: 1.5px solid rgba(93,176,240,0.4); display: flex; align-items: center; justify-content: center;
+  }
+  .pipeline-stage .label { font-size: 13px; font-weight: 800; color: #fff; }
+  .pipeline-stage .sub { font-size: 11.5px; color: #8E86A0; }
+  .pipeline-connector { width: 60px; height: 1.5px; background: linear-gradient(90deg, rgba(93,176,240,0.5), rgba(93,176,240,0.15)); margin: 0 -4px 34px; }
+
+  /* ===== FEATURES ===== */
+  .section { padding: 76px 32px; max-width: 1080px; margin: 0 auto; }
+  .section-eyebrow {
+    font-size: 11.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--blue); text-align: center; margin-bottom: 10px;
+  }
+  .section h2 { font-size: 30px; font-weight: 900; text-align: center; margin: 0 0 44px; letter-spacing: -0.01em; }
+
+  .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .feature-card {
+    background: var(--card-bg); border: 1px solid var(--line); border-radius: 12px; padding: 26px 24px;
+  }
+  .feature-card .icon {
+    width: 42px; height: 42px; border-radius: 9px; background: #E7F0FB; display: flex;
+    align-items: center; justify-content: center; margin-bottom: 16px;
+  }
+  .feature-card h3 { font-size: 15.5px; font-weight: 800; margin: 0 0 8px; }
+  .feature-card p { font-size: 13.5px; color: var(--ink-soft); line-height: 1.55; margin: 0; }
+
+  /* ===== PRICING ===== */
+  .pricing-wrap { background: var(--surface2); padding: 76px 32px; }
+  .pricing-card {
+    max-width: 400px; margin: 0 auto; background: var(--card-bg); border: 2px solid var(--sidebar);
+    border-radius: 16px; padding: 40px 36px; text-align: center;
+  }
+  .pricing-card .plano { font-size: 13px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
+  .pricing-card .valor { font-size: 48px; font-weight: 900; margin: 10px 0 2px; letter-spacing: -0.02em; }
+  .pricing-card .valor span { font-size: 16px; font-weight: 700; color: var(--ink-soft); }
+  .pricing-card .obs { font-size: 12.5px; color: var(--ink-faint); margin-bottom: 26px; }
+  .pricing-list { list-style: none; padding: 0; margin: 0 0 30px; text-align: left; }
+  .pricing-list li { display: flex; gap: 10px; font-size: 13.5px; color: var(--ink); padding: 7px 0; align-items: flex-start; }
+  .pricing-list li .check { color: var(--blue); font-weight: 900; flex-shrink: 0; }
+
+  /* ===== CTA FINAL ===== */
+  .cta-final { background: var(--sidebar); color: #fff; text-align: center; padding: 72px 32px; }
+  .cta-final h2 { font-size: 26px; font-weight: 900; margin: 0 0 14px; }
+  .cta-final p { color: #C9C2D6; margin: 0 0 30px; font-size: 15px; }
+
+  /* ===== FOOTER ===== */
+  .site-footer { padding: 40px 32px; text-align: center; }
+  .footer-links { display: flex; justify-content: center; gap: 22px; flex-wrap: wrap; margin-bottom: 16px; }
+  .footer-links a { font-size: 13px; font-weight: 700; color: var(--ink-soft); text-decoration: none; }
+  .footer-links a:hover { color: var(--blue); }
+  .site-footer .copy { font-size: 12px; color: var(--ink-faint); }
+
+  @media (max-width: 780px) {
+    .features-grid { grid-template-columns: 1fr; }
+    .site-header { padding: 14px 18px; }
+    .site-header .nav-actions a:not(.btn-cta) { display: none; }
+    .hero { padding: 52px 20px 72px; }
+    .section { padding: 56px 20px; }
+    .pricing-wrap { padding: 56px 20px; }
+    .pricing-card { padding: 32px 24px; }
+    .pipeline-connector { width: 24px; }
+    .pipeline-stage { width: 96px; }
+  }
+</style>
 </head>
 <body>
-  <p>Redirecionando para <a href="login.html">login.html</a>...</p>
+
+<header class="site-header">
+  <div class="mark">
+    <img src="assets/logo.png" alt="StudioFlow">
+    <div class="wordmark">Studio<span>Flow</span></div>
+  </div>
+  <div class="nav-actions">
+    <a href="politica-privacidade.html">Privacidade</a>
+    <a href="login.html">Entrar</a>
+    <a href="cadastro.html" class="btn-cta">Criar conta</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-eyebrow">Gestão para fotógrafos e criativos</div>
+  <h1>Do primeiro contato à <em>entrega final</em>, numa tela só.</h1>
+  <p class="lead">Orçamentos em PDF, agenda, financeiro e o pipeline dos seus trabalhos — organizado do jeito que um estúdio de verdade funciona.</p>
+  <div class="hero-actions">
+    <a href="cadastro.html" class="btn-cta-lg">Criar minha conta</a>
+    <a href="login.html" class="btn-ghost">Já tenho conta</a>
+  </div>
+
+  <div class="pipeline-visual">
+    <div class="pipeline-stage">
+      <div class="dot">📄</div>
+      <div class="label">Contrato</div>
+      <div class="sub">Orçamento fechado</div>
+    </div>
+    <div class="pipeline-connector"></div>
+    <div class="pipeline-stage">
+      <div class="dot">📷</div>
+      <div class="label">Evento</div>
+      <div class="sub">Data confirmada</div>
+    </div>
+    <div class="pipeline-connector"></div>
+    <div class="pipeline-stage">
+      <div class="dot">✅</div>
+      <div class="label">Entrega</div>
+      <div class="sub">Trabalho concluído</div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-eyebrow">Tudo em um lugar</div>
+  <h2>Feito pra como um estúdio realmente trabalha</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="icon">📋</div>
+      <h3>Pipeline de trabalhos</h3>
+      <p>Acompanhe cada job do orçamento até a entrega, sem perder o fio de nenhum cliente.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🧾</div>
+      <h3>Orçamentos em PDF</h3>
+      <p>Gere propostas profissionais com pacotes, itens e condições de pagamento em segundos.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">📅</div>
+      <h3>Agenda</h3>
+      <p>Veja seus compromissos confirmados em lista ou num calendário mensal completo.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">💰</div>
+      <h3>Financeiro</h3>
+      <p>Controle entradas e saídas, com extrato em PDF por mês ou período.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🤝</div>
+      <h3>Freelancers</h3>
+      <p>Gerencie quem trabalha com você e os pagamentos de cada período.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🏢</div>
+      <h3>Sua marca, seu jeito</h3>
+      <p>Configure o nome e contato do seu estúdio nos PDFs — o cliente vê sua marca, não a nossa.</p>
+    </div>
+  </div>
+</section>
+
+<div class="pricing-wrap">
+  <div class="section-eyebrow">Investimento</div>
+  <h2 style="text-align:center;font-size:30px;font-weight:900;margin:0 0 40px;letter-spacing:-0.01em;">Um plano simples, sem surpresas</h2>
+  <div class="pricing-card">
+    <div class="plano">Plano StudioFlow</div>
+    <div class="valor">R$29,90<span>/mês</span></div>
+    <div class="obs">Cobrança recorrente no cartão · cancele quando quiser</div>
+    <ul class="pricing-list">
+      <li><span class="check">✓</span> Pipeline, orçamentos e agenda completos</li>
+      <li><span class="check">✓</span> Controle financeiro com extrato em PDF</li>
+      <li><span class="check">✓</span> Gestão de freelancers</li>
+      <li><span class="check">✓</span> Sua marca nos orçamentos enviados</li>
+      <li><span class="check">✓</span> Acesso pelo computador e celular</li>
+    </ul>
+    <a href="cadastro.html" class="btn-cta-lg" style="display:block">Começar agora</a>
+  </div>
+</div>
+
+<section class="cta-final">
+  <h2>Pare de gerenciar seu estúdio por planilha.</h2>
+  <p>Leva menos de 2 minutos pra criar sua conta.</p>
+  <a href="cadastro.html" class="btn-cta-lg">Criar minha conta</a>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-links">
+    <a href="https://wa.me/5524992938680" target="_blank" rel="noopener">WhatsApp</a>
+    <a href="https://instagram.com/app.studioflow" target="_blank" rel="noopener">Instagram</a>
+    <a href="politica-privacidade.html">Política de Privacidade</a>
+    <a href="login.html">Entrar</a>
+  </div>
+  <div class="copy">© 2026 StudioFlow — Gestão para fotógrafos e criativos.</div>
+</footer>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=6';
+
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (session) {
+    try {
+      const profile = await ensureProfileAndTenant(session.user);
+      const tenant = profile.tenants;
+      if (isTenantActiveNow(tenant)) {
+        window.location.href = tenant.onboarding_completo ? 'dashboard.html' : 'onboarding.html';
+      } else {
+        window.location.href = 'login.html';
+      }
+    } catch (err) {
+      console.error(err);
+      document.documentElement.classList.add('pronto');
+    }
+  } else {
+    document.documentElement.classList.add('pronto');
+  }
+</script>
+
 </body>
 </html>
