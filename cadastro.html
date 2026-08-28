@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="icon" href="assets/logo-small.png">
-<link rel="stylesheet" href="css/style.css?v=4">
+<link rel="stylesheet" href="css/style.css?v=5">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B0E1F">
 </head>
@@ -38,6 +38,13 @@
         <label for="password">Senha</label>
         <input type="password" id="password" required minlength="6" placeholder="Mínimo 6 caracteres">
         <small>Essa é a senha de acesso à plataforma — guarde em local seguro.</small>
+      </div>
+
+      <div class="field field-checkbox">
+        <label class="checkbox-label">
+          <input type="checkbox" id="aceite-termos" required>
+          <span>Li e aceito a <a href="politica-privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a> do StudioFlow.</span>
+        </label>
       </div>
 
       <button type="submit" id="btn-submit">Criar conta</button>
@@ -73,10 +80,17 @@
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
 
+    if (!document.getElementById('aceite-termos').checked) {
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'É preciso aceitar a Política de Privacidade para criar a conta.';
+      btn.disabled = false;
+      return;
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { business_name } }
+      options: { data: { business_name, aceitou_termos_em: new Date().toISOString() } }
     });
 
     if (error) {

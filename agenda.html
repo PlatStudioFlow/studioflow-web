@@ -7,7 +7,7 @@
 <link rel="icon" href="assets/logo-small.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="stylesheet" href="css/style.css?v=5">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B0E1F">
 </head>
@@ -54,14 +54,35 @@
       <button class="btn-primary" id="btn-novo">+ Novo evento</button>
     </div>
 
-    <div class="section-block">
-      <div class="section-title-row"><h2>Próximos</h2><span class="count" id="count-futuros"></span></div>
-      <div id="area-futuros"><div class="empty-state">Carregando...</div></div>
+    <div class="view-toggle">
+      <button type="button" class="view-toggle-btn active" data-view="lista">Lista</button>
+      <button type="button" class="view-toggle-btn" data-view="calendario">Calendário</button>
     </div>
 
-    <div class="section-block">
-      <div class="section-title-row"><h2>Passados</h2><span class="count" id="count-passados"></span></div>
-      <div id="area-passados"></div>
+    <div id="view-lista">
+      <div class="section-block">
+        <div class="section-title-row"><h2>Próximos</h2><span class="count" id="count-futuros"></span></div>
+        <div id="area-futuros"><div class="empty-state">Carregando...</div></div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-title-row"><h2>Passados</h2><span class="count" id="count-passados"></span></div>
+        <div id="area-passados"></div>
+      </div>
+    </div>
+
+    <div id="view-calendario" style="display:none">
+      <div class="calendar-nav">
+        <button type="button" class="btn-secondary" id="cal-prev">‹</button>
+        <div class="calendar-mes-label" id="cal-mes-label"></div>
+        <button type="button" class="btn-secondary" id="cal-next">›</button>
+        <button type="button" class="btn-secondary" id="cal-hoje" style="margin-left:auto">Hoje</button>
+      </div>
+      <div class="calendar-grid" id="calendar-grid"></div>
+      <div class="section-block" id="calendar-detalhe-wrap" style="display:none;margin-top:22px">
+        <div class="section-title-row"><h2 id="calendar-detalhe-titulo">Eventos do dia</h2></div>
+        <div id="calendar-detalhe"></div>
+      </div>
     </div>
   </main>
 
@@ -107,7 +128,7 @@
 
 <script type="module">
   import { supabase } from './js/supabase-client.js?v=5';
-  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=6';
   import { fmtDate, STAGE_LABELS } from './js/utils.js?v=5';
 
   const { data: { session } } = await supabase.auth.getSession();
@@ -197,6 +218,19 @@
     });
   }
 
+  document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const view = btn.dataset.view;
+      document.getElementById('view-lista').style.display = view === 'lista' ? '' : 'none';
+      document.getElementById('view-calendario').style.display = view === 'calendario' ? '' : 'none';
+      if (view === 'calendario') renderCalendario();
+    });
+  });
+
+  let allItems = [];
+
   async function carregarAgenda() {
     const [{ data: jobs }, { data: eventos }] = await Promise.all([
       supabase.from('jobs').select('id, data_evento, horario, tipo_trabalho, stage, clients(nome)').not('data_evento', 'is', null),
@@ -224,6 +258,7 @@
     });
 
     items.sort((a, b) => (a.data + (a.horario||'')).localeCompare(b.data + (b.horario||'')));
+    allItems = items;
 
     const hojeISO = new Date().toISOString().slice(0, 10);
     const futuros = items.filter(i => i.data >= hojeISO);
@@ -233,7 +268,87 @@
     document.getElementById('count-passados').textContent = passados.length;
     renderTabela(document.getElementById('area-futuros'), futuros, true);
     renderTabela(document.getElementById('area-passados'), passados, false);
+
+    if (document.getElementById('view-calendario').style.display !== 'none') renderCalendario();
   }
+
+  // --- Visão de calendário mensal ---
+  const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  let calMes = new Date().getMonth();
+  let calAno = new Date().getFullYear();
+  let diaSelecionado = null;
+
+  function itensDoDia(isoDate) {
+    return allItems.filter(i => i.data === isoDate);
+  }
+
+  function renderCalendario() {
+    const grid = document.getElementById('calendar-grid');
+    document.getElementById('cal-mes-label').textContent = `${MESES[calMes]} ${calAno}`;
+
+    const primeiroDia = new Date(calAno, calMes, 1);
+    const inicioGrid = new Date(primeiroDia);
+    inicioGrid.setDate(inicioGrid.getDate() - primeiroDia.getDay());
+
+    const hojeISO = new Date().toISOString().slice(0, 10);
+
+    let html = DIAS_SEMANA.map(d => `<div class="calendar-weekday">${d}</div>`).join('');
+
+    const cursor = new Date(inicioGrid);
+    for (let i = 0; i < 42; i++) {
+      const iso = cursor.toISOString().slice(0, 10);
+      const outroMes = cursor.getMonth() !== calMes;
+      const isHoje = iso === hojeISO;
+      const itens = itensDoDia(iso);
+
+      const chips = itens.slice(0, 2).map(it =>
+        `<div class="calendar-item ${tagClass(it.tag)}">${escapeHtml(it.titulo)}</div>`
+      ).join('');
+      const maisChip = itens.length > 2 ? `<div class="calendar-item-mais">+${itens.length - 2} mais</div>` : '';
+
+      html += `
+        <div class="calendar-cell ${outroMes ? 'other-month' : ''} ${isHoje ? 'today' : ''} ${diaSelecionado === iso ? 'selected' : ''}" data-date="${iso}">
+          <div class="calendar-day-num">${cursor.getDate()}</div>
+          ${chips}${maisChip}
+        </div>`;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    grid.innerHTML = html;
+
+    grid.querySelectorAll('.calendar-cell').forEach(cell => {
+      cell.addEventListener('click', () => {
+        diaSelecionado = cell.dataset.date;
+        renderCalendario();
+        mostrarDetalheDia(diaSelecionado);
+      });
+    });
+  }
+
+  function mostrarDetalheDia(iso) {
+    const wrap = document.getElementById('calendar-detalhe-wrap');
+    const itens = itensDoDia(iso);
+    const [ano, mes, dia] = iso.split('-');
+    document.getElementById('calendar-detalhe-titulo').textContent = `Eventos em ${dia}/${mes}/${ano}`;
+    wrap.style.display = '';
+    renderTabela(document.getElementById('calendar-detalhe'), itens, false);
+  }
+
+  document.getElementById('cal-prev').addEventListener('click', () => {
+    calMes--; if (calMes < 0) { calMes = 11; calAno--; }
+    renderCalendario();
+  });
+  document.getElementById('cal-next').addEventListener('click', () => {
+    calMes++; if (calMes > 11) { calMes = 0; calAno++; }
+    renderCalendario();
+  });
+  document.getElementById('cal-hoje').addEventListener('click', () => {
+    calMes = new Date().getMonth(); calAno = new Date().getFullYear();
+    diaSelecionado = new Date().toISOString().slice(0, 10);
+    renderCalendario();
+    mostrarDetalheDia(diaSelecionado);
+  });
 
   // --- Modal de evento avulso ---
   const modal = document.getElementById('modal-evento');

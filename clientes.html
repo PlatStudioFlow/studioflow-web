@@ -98,7 +98,7 @@
 
 <script type="module">
   import { supabase } from './js/supabase-client.js?v=5';
-  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=6';
 
   // --- Sessão + tenant ---
   const { data: { session } } = await supabase.auth.getSession();

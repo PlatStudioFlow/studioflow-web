@@ -7,7 +7,7 @@
 <link rel="icon" href="assets/logo-small.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=4">
+<link rel="stylesheet" href="css/style.css?v=5">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0B0E1F">
 <style>
@@ -105,6 +105,7 @@
       <div class="contact-links" style="justify-content:flex-start">
         <a href="https://wa.me/5524992938680" target="_blank" rel="noopener">WhatsApp</a>
         <a href="https://instagram.com/app.studioflow" target="_blank" rel="noopener">Instagram</a>
+        <a href="politica-privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>
       </div>
     </div>
   </main>
@@ -113,7 +114,7 @@
 
 <script type="module">
   import { supabase } from './js/supabase-client.js?v=5';
-  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=6';
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) window.location.href = 'login.html';

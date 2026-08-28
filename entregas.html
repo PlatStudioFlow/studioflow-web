@@ -62,7 +62,7 @@
 
 <script type="module">
   import { supabase } from './js/supabase-client.js?v=5';
-  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=6';
   import { fmtDate } from './js/utils.js?v=5';
 
   const { data: { session } } = await supabase.auth.getSession();
