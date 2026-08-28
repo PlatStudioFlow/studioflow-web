@@ -90,7 +90,10 @@
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { business_name, aceitou_termos_em: new Date().toISOString() } }
+      options: {
+        data: { business_name, aceitou_termos_em: new Date().toISOString() },
+        emailRedirectTo: `${window.location.origin}${window.location.pathname.replace('cadastro.html', '')}login.html`,
+      }
     });
 
     if (error) {
