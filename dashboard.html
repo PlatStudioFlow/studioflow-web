@@ -112,10 +112,23 @@
 
   function renderAssinaturaBadge(tenantData) {
     const el = document.getElementById('subscription-badge');
-    if (!tenantData.assinatura_vence_em || tenantData.status !== 'ativo') return;
-
     const hojeISOLocal = new Date().toISOString().slice(0, 10);
     const emSeteDias = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    if (tenantData.status === 'trial' && tenantData.trial_ends_at) {
+      const diasRestantes = Math.ceil(
+        (new Date(tenantData.trial_ends_at) - new Date(hojeISOLocal)) / (1000 * 60 * 60 * 24)
+      );
+      el.style.display = 'inline-flex';
+      el.textContent = diasRestantes > 0
+        ? `Teste grátis: ${diasRestantes} dia(s) restante(s)`
+        : 'Teste grátis termina hoje';
+      if (diasRestantes <= 3) el.classList.add('subscription-badge--atencao');
+      return;
+    }
+
+    if (!tenantData.assinatura_vence_em || tenantData.status !== 'ativo') return;
+
     const dataFormatada = formatarDataCurta(tenantData.assinatura_vence_em);
 
     el.style.display = 'inline-flex';
