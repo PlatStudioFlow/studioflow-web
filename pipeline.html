@@ -9,6 +9,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css?v=3">
 <style>
+  .badge-parado {
+    margin-top: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--pending);
+    background: var(--pending-bg);
+    border-radius: 5px;
+    padding: 3px 7px;
+    display: inline-block;
+  }
   /* Rótulo de seção da navegação, embutido para garantir renderização
      independente do carregamento do style.css compartilhado. */
   .nav-section-label {
@@ -97,6 +107,7 @@
               <option value="contrato">Orçamento</option>
               <option value="evento">Evento</option>
               <option value="entrega">Entrega</option>
+              <option value="nao_fechado">Não fechado</option>
             </select>
           </div>
         </div>
@@ -166,7 +177,7 @@
 <script type="module">
   import { supabase } from './js/supabase-client.js?v=5';
   import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=6';
-  import { parseMoney, fmtMoney, fmtDate, STAGE_LABELS, DEFAULT_TERMOS } from './js/utils.js?v=5';
+  import { parseMoney, fmtMoney, fmtDate, STAGE_LABELS, DEFAULT_TERMOS } from './js/utils.js?v=6';
 
   // --- Sessão + tenant ---
   const { data: { session } } = await supabase.auth.getSession();
@@ -236,10 +247,17 @@
           lastMonth = mk;
         }
         const sub = [j.tipo_trabalho, j.data_evento ? fmtDate(j.data_evento) : null].filter(Boolean).join(' · ');
+        const diasParado = j.stage === 'contrato' && j.created_at
+          ? Math.floor((Date.now() - new Date(j.created_at)) / (1000 * 60 * 60 * 24))
+          : 0;
+        const badgeParado = diasParado >= 15
+          ? `<div class="badge-parado">⏱ Parado há ${diasParado} dias</div>`
+          : '';
         html += `
           <div class="board-card" data-tipo="job" data-id="${j.id}">
             <div class="client">${j.clients ? escapeHtml(j.clients.nome) : '—'}</div>
             ${sub ? `<div class="sub">${escapeHtml(sub)}</div>` : ''}
+            ${badgeParado}
           </div>`;
       });
       return `

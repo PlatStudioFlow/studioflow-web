@@ -9,6 +9,19 @@
 <link rel="icon" href="assets/logo-small.png">
 <link rel="stylesheet" href="css/style.css?v=3">
 <style>
+  .aviso-parado {
+    background: var(--pending-bg);
+    border: 1px solid var(--pending);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+  }
+  .aviso-parado-head { font-size: 14px; font-weight: 800; color: var(--pending); margin-bottom: 8px; }
+  .aviso-parado-lista { margin: 0 0 10px; padding-left: 18px; font-size: 13.5px; color: var(--ink); }
+  .aviso-parado-lista li { margin-bottom: 3px; }
+  .aviso-parado-link { font-size: 12.5px; font-weight: 700; color: var(--pending); text-decoration: none; }
+  .aviso-parado-link:hover { text-decoration: underline; }
+
   /* Rótulo de seção da navegação, embutido para garantir renderização
      independente do carregamento do style.css compartilhado. */
   .nav-section-label {
@@ -74,6 +87,8 @@
       <div class="stat-card"><div class="num">—</div><div class="label">carregando...</div></div>
     </div>
 
+    <div class="aviso-parado" id="aviso-orcamentos-parados" style="display:none"></div>
+
     <h2 class="section-title">Pipeline <span class="count" id="pipeline-count"></span></h2>
     <div class="pipeline-grid" id="pipeline-grid"></div>
 
@@ -110,7 +125,7 @@
 <script type="module">
   import { supabase } from './js/supabase-client.js?v=5';
   import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=6';
-  import { STAGE_LABELS as STAGE_LABELS_LOCAL, fmtMoney } from './js/utils.js?v=5';
+  import { STAGE_LABELS as STAGE_LABELS_LOCAL, fmtMoney } from './js/utils.js?v=6';
 
   const DIAS = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
   const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -226,6 +241,16 @@
   const entregasPendentes = todosJobs.filter(j => j.stage === 'entrega');
   const trabalhosPipeline = todosJobs; // contrato + evento + entrega
 
+  const DIAS_LIMITE_ORCAMENTO = 15;
+  const orcamentosParados = todosJobs
+    .filter(j => j.stage === 'contrato' && j.created_at)
+    .map(j => ({
+      cliente: j.clients ? j.clients.nome : 'Cliente sem nome',
+      dias: Math.floor((Date.now() - new Date(j.created_at)) / (1000 * 60 * 60 * 24)),
+    }))
+    .filter(j => j.dias >= DIAS_LIMITE_ORCAMENTO)
+    .sort((a, b) => b.dias - a.dias);
+
   const stats = [
     { num: eventosEstaSemana.length, label: 'evento(s) esta semana' },
     { num: entregasPendentes.length, label: 'entregas pendentes' },
@@ -240,6 +265,20 @@
       <div class="label">${s.label}</div>
     </div>
   `).join('');
+
+  const avisoEl = document.getElementById('aviso-orcamentos-parados');
+  if (orcamentosParados.length > 0) {
+    avisoEl.style.display = '';
+    avisoEl.innerHTML = `
+      <div class="aviso-parado-head">⏱ ${orcamentosParados.length} orçamento(s) ultrapassaram ${DIAS_LIMITE_ORCAMENTO} dias sem resposta</div>
+      <ul class="aviso-parado-lista">
+        ${orcamentosParados.map(o => `<li>${escapeHtml(o.cliente)} — parado há ${o.dias} dias</li>`).join('')}
+      </ul>
+      <a href="pipeline.html" class="aviso-parado-link">Ver no Pipeline →</a>
+    `;
+  } else {
+    avisoEl.style.display = 'none';
+  }
 
   // --- Pipeline (Orçamento / Evento / Avulsos) ---
   const contratos = todosJobs.filter(j => j.stage === 'contrato');
