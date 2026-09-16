@@ -122,6 +122,12 @@
 
         <hr class="job-divider">
         <div class="job-section-label">Pacotes (valores independentes — não são somados)</div>
+        <div class="field" id="modelo-pacote-wrap" style="display:none;margin-bottom:10px;">
+          <label for="f-modelo-pacote">Usar modelo salvo</label>
+          <select class="select-input" id="f-modelo-pacote">
+            <option value="">Selecione um modelo para adicionar…</option>
+          </select>
+        </div>
         <div id="pkg-holder"></div>
         <button type="button" class="link-btn" id="btn-add-pkg">+ adicionar pacote</button>
 
@@ -188,6 +194,7 @@
   });
 
   let clientesCache = [];
+  let modelosCache = [];
   let editandoId = null;
   let pkgSeq = 0;
 
@@ -303,6 +310,14 @@
 
   document.getElementById('btn-add-pkg').addEventListener('click', () => addPkgRow());
 
+  document.getElementById('f-modelo-pacote').addEventListener('change', (e) => {
+    const id = e.target.value;
+    if (!id) return;
+    const modelo = modelosCache.find(m => m.id === id);
+    if (modelo) addPkgRow(modelo);
+    e.target.value = '';
+  });
+
   function collectPackages() {
     const pkgs = [];
     pkgHolder.querySelectorAll('.pkg-row').forEach((row, idx) => {
@@ -336,6 +351,18 @@
     selectCliente.innerHTML = clientesCache.length
       ? clientesCache.map(c => `<option value="${c.id}">${escapeHtml(c.nome)}</option>`).join('')
       : `<option value="">Cadastre um cliente primeiro</option>`;
+
+    const { data: modelos } = await supabase.from('modelos_pacote').select('*').order('nome');
+    modelosCache = modelos || [];
+    const modeloWrap = document.getElementById('modelo-pacote-wrap');
+    const selectModelo = document.getElementById('f-modelo-pacote');
+    if (modelosCache.length) {
+      modeloWrap.style.display = '';
+      selectModelo.innerHTML = `<option value="">Selecione um modelo para adicionar…</option>` +
+        modelosCache.map(m => `<option value="${m.id}">${escapeHtml(m.nome)}</option>`).join('');
+    } else {
+      modeloWrap.style.display = 'none';
+    }
 
     if (jobId) {
       document.getElementById('modal-titulo').textContent = 'Editar trabalho';
