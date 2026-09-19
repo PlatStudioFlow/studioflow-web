@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfólio</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#0B0E1F">
+<style>
+  :root {
+    --bg: #0B0E1F; --card-bg: #12162b; --line: #232842; --ink: #EDEEF7; --ink-soft: #9791A3; --blue: #2E86DE;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--ink); }
+
+  .capa { width: 100%; height: 240px; object-fit: cover; background: var(--card-bg); display: block; }
+  .capa-vazia { width: 100%; height: 160px; background: linear-gradient(135deg, var(--card-bg), var(--bg)); }
+
+  .header-wrap { max-width: 760px; margin: 0 auto; padding: 0 20px; }
+  .perfil-row { display: flex; align-items: flex-end; gap: 18px; margin-top: -48px; }
+  .perfil-foto {
+    width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 4px solid var(--bg);
+    background: var(--card-bg); flex-shrink: 0;
+  }
+  .perfil-foto-vazia {
+    width: 96px; height: 96px; border-radius: 50%; border: 4px solid var(--bg); background: var(--card-bg); flex-shrink: 0;
+  }
+  .nome-exibicao { font-size: 22px; font-weight: 800; margin: 0 0 24px; }
+
+  .bio { font-size: 14.5px; line-height: 1.6; color: var(--ink-soft); margin: 18px 0 32px; white-space: pre-wrap; }
+
+  .secao-titulo { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; margin: 32px 0 4px; }
+  .categoria-nome { font-size: 15px; font-weight: 700; margin: 22px 0 10px; }
+
+  .grid-fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  .grid-fotos img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; cursor: pointer; display: block; background: var(--card-bg); }
+
+  .grid-videos { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+  .video-card iframe { width: 100%; aspect-ratio: 9/16; border: none; border-radius: 8px; display: block; background: var(--card-bg); }
+
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,.9); display: none;
+    align-items: center; justify-content: center; z-index: 50; padding: 20px; cursor: zoom-out;
+  }
+  .lightbox img { max-width: 100%; max-height: 100%; border-radius: 4px; }
+
+  .estado-vazio, .estado-erro {
+    max-width: 480px; margin: 120px auto; text-align: center; padding: 0 20px; color: var(--ink-soft); font-size: 14px;
+  }
+
+  footer { text-align: center; padding: 40px 20px 60px; color: var(--ink-soft); font-size: 12px; }
+  footer a { color: var(--blue); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div id="app"><div class="estado-vazio">Carregando...</div></div>
+<div class="lightbox" id="lightbox"><img id="lightbox-img" src=""></div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+
+  function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+  function detectarEmbed(url) {
+    try {
+      const u = new URL(url);
+      const host = u.hostname.replace('www.', '');
+      if (host === 'youtube.com' || host === 'm.youtube.com') {
+        let id = u.searchParams.get('v');
+        if (!id && u.pathname.startsWith('/shorts/')) id = u.pathname.split('/')[2];
+        if (id) return `https://www.youtube.com/embed/${id}`;
+      }
+      if (host === 'youtu.be') {
+        const id = u.pathname.slice(1);
+        if (id) return `https://www.youtube.com/embed/${id}`;
+      }
+      if (host === 'instagram.com') {
+        const m = u.pathname.match(/\/(reel|p|tv)\/([^/]+)/);
+        if (m) return `https://www.instagram.com/${m[1]}/${m[2]}/embed`;
+      }
+      if (host === 'tiktok.com') {
+        const m = u.pathname.match(/\/video\/(\d+)/);
+        if (m) return `https://www.tiktok.com/embed/v2/${m[1]}`;
+      }
+    } catch (e) { /* link inválido */ }
+    return null;
+  }
+
+  const app = document.getElementById('app');
+  const slug = new URLSearchParams(window.location.search).get('u');
+
+  if (!slug) {
+    app.innerHTML = `<div class="estado-erro">Nenhuma página informada.</div>`;
+  } else {
+    carregar(slug);
+  }
+
+  async function carregar(slug) {
+    const { data: portfolio, error } = await supabase
+      .from('portfolios').select('*').eq('slug', slug).eq('publicado', true).maybeSingle();
+
+    if (error || !portfolio) {
+      app.innerHTML = `<div class="estado-erro">Essa página não existe ou não está disponível no momento.</div>`;
+      return;
+    }
+
+    const { data: categorias } = await supabase
+      .from('portfolio_categorias').select('*').eq('tenant_id', portfolio.tenant_id).order('created_at');
+    const { data: itens } = await supabase
+      .from('portfolio_itens').select('*').eq('tenant_id', portfolio.tenant_id).order('created_at');
+
+    const itensPorCategoria = {};
+    (itens || []).forEach(it => { (itensPorCategoria[it.categoria_id] ||= []).push(it); });
+
+    const catsFoto = (categorias || []).filter(c => c.tipo === 'foto');
+    const catsVideo = (categorias || []).filter(c => c.tipo === 'video');
+
+    document.title = portfolio.nome_exibicao || 'Portfólio';
+
+    app.innerHTML = `
+      ${portfolio.foto_capa_url ? `<img class="capa" src="${portfolio.foto_capa_url}" alt="">` : `<div class="capa-vazia"></div>`}
+      <div class="header-wrap">
+        <div class="perfil-row">
+          ${portfolio.foto_perfil_url
+            ? `<img class="perfil-foto" src="${portfolio.foto_perfil_url}" alt="">`
+            : `<div class="perfil-foto-vazia"></div>`}
+        </div>
+        <h1 class="nome-exibicao">${escapeHtml(portfolio.nome_exibicao || '')}</h1>
+        ${portfolio.bio ? `<div class="bio">${escapeHtml(portfolio.bio)}</div>` : ''}
+
+        ${catsFoto.length ? `<div class="secao-titulo">Fotos</div>` : ''}
+        ${catsFoto.map(cat => `
+          <div class="categoria-nome">${escapeHtml(cat.nome)}</div>
+          <div class="grid-fotos">
+            ${(itensPorCategoria[cat.id] || []).map(it => `<img src="${it.foto_url}" data-lightbox="${it.foto_url}" alt="${escapeHtml(cat.nome)}">`).join('')}
+          </div>
+        `).join('')}
+
+        ${catsVideo.length ? `<div class="secao-titulo">Vídeos</div>` : ''}
+        ${catsVideo.map(cat => `
+          <div class="categoria-nome">${escapeHtml(cat.nome)}</div>
+          <div class="grid-videos">
+            ${(itensPorCategoria[cat.id] || []).map(it => {
+              const embed = detectarEmbed(it.video_url || '');
+              return embed
+                ? `<div class="video-card"><iframe src="${embed}" allowfullscreen loading="lazy"></iframe></div>`
+                : `<div class="video-card"><a href="${escapeHtml(it.video_url)}" target="_blank" rel="noopener" style="color:var(--blue)">Ver vídeo</a></div>`;
+            }).join('')}
+          </div>
+        `).join('')}
+      </div>
+      <footer>Feito com <a href="index.html" target="_blank" rel="noopener">StudioFlow</a></footer>
+    `;
+
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightbox-img');
+    app.querySelectorAll('[data-lightbox]').forEach(img => {
+      img.addEventListener('click', () => {
+        lightboxImg.src = img.dataset.lightbox;
+        lightbox.style.display = 'flex';
+      });
+    });
+    lightbox.addEventListener('click', () => { lightbox.style.display = 'none'; lightboxImg.src = ''; });
+  }
+</script>
+</body>
+</html>

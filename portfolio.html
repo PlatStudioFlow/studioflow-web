@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfólio — StudioFlow</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=3">
+<style>
+  /* Rótulo de seção da navegação, embutido para garantir renderização
+     independente do carregamento do style.css compartilhado. */
+  .nav-section-label {
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sidebar-text-dim);
+    padding: 16px 12px 4px;
+  }
+
+  .link-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--card-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 16px; margin-bottom: 20px;
+  }
+  .link-bar input {
+    flex: 1; min-width: 200px; background: var(--bg); border: 1px solid var(--line);
+    border-radius: 6px; padding: 7px 10px; font-size: 13px; color: var(--ink-soft);
+  }
+  .badge-pub { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+  .badge-pub.on { background: #1c3a2e; color: #4ade80; }
+  .badge-pub.off { background: #3a1c1c; color: #f87171; }
+
+  .settings-card { background: var(--card-bg); border: 1px solid var(--line); border-radius: 8px; padding: 26px 28px; margin-bottom: 22px; }
+  .settings-card h2 { font-size: 16px; margin: 0 0 16px; }
+
+  .foto-drop {
+    border: 1.5px dashed var(--line); border-radius: 6px; padding: 14px; text-align: center;
+    cursor: pointer; background: var(--bg); transition: border-color .15s ease; position: relative;
+  }
+  .foto-drop:hover { border-color: var(--blue); }
+  .foto-drop input[type="file"] { display: none; }
+  .foto-drop .hint { font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
+  #perfil-preview { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; display: none; margin: 0 auto; }
+  #capa-preview { width: 100%; max-height: 140px; object-fit: cover; border-radius: 4px; display: none; }
+
+  .char-counter { font-size: 11.5px; color: var(--ink-soft); text-align: right; margin-top: 4px; }
+
+  .categoria-card { background: var(--card-bg); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; margin-bottom: 14px; }
+  .categoria-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .categoria-head h3 { font-size: 14.5px; margin: 0; }
+  .categoria-excluir { font-size: 12px; color: var(--ink-soft); cursor: pointer; background: none; border: none; }
+  .categoria-excluir:hover { color: #f87171; }
+
+  .itens-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+  .item-foto { position: relative; border-radius: 6px; overflow: hidden; aspect-ratio: 1; background: var(--bg); }
+  .item-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .item-remover {
+    position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(0,0,0,.65); color: #fff; border: none; cursor: pointer; font-size: 13px; line-height: 1;
+  }
+  .item-add-foto {
+    aspect-ratio: 1; border: 1.5px dashed var(--line); border-radius: 6px; display: flex;
+    align-items: center; justify-content: center; cursor: pointer; color: var(--ink-soft); font-size: 26px;
+  }
+  .item-add-foto:hover { border-color: var(--blue); }
+  .item-add-foto input { display: none; }
+
+  .itens-video-lista { display: flex; flex-direction: column; gap: 10px; }
+  .item-video { display: flex; align-items: center; gap: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; }
+  .item-video iframe { width: 110px; height: 155px; border: none; border-radius: 4px; flex-shrink: 0; }
+  .item-video .video-info { flex: 1; font-size: 12.5px; color: var(--ink-soft); word-break: break-all; }
+  .video-add-form { display: flex; gap: 8px; margin-top: 10px; }
+  .video-add-form input { flex: 1; }
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+</head>
+<body class="app">
+<script type="module" src="js/mobile-nav.js?v=1"></script>
+<script type="module" src="js/search.js?v=1"></script>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="mark"><img src="assets/logo.png" alt="StudioFlow" class="icon"><div class="wordmark">Studio<span>Flow</span></div></div>
+    <div class="tagline">Gestão para criativos</div>
+    <nav>
+      <a href="dashboard.html" class="nav-item">Dashboard</a>
+      <div class="nav-section-label">Operação</div>
+      <a href="pipeline.html" class="nav-item">Pipeline</a>
+      <a href="orcamentos.html" class="nav-item">Orçamentos</a>
+      <a href="agenda.html" class="nav-item">Agenda</a>
+      <a href="entregas.html" class="nav-item">Entregas</a>
+      <a href="clientes.html" class="nav-item">Clientes</a>
+      <div class="nav-section-label">Financeiro</div>
+      <a href="financeiro.html" class="nav-item">Financeiro</a>
+      <a href="freelancer.html" class="nav-item">Freelancer</a>
+      <div class="nav-section-label">Organização</div>
+      <a href="conteudo.html" class="nav-item">Conteúdo</a>
+      <a href="portfolio.html" class="nav-item active">Portfólio</a>
+      <a href="anotacoes.html" class="nav-item">Anotações</a>
+      <a href="tarefas.html" class="nav-item">Tarefas</a>
+      <a href="modelos.html" class="nav-item">Modelos de Pacote</a>
+      <a href="faq.html" class="nav-item">Ajuda / FAQ</a>
+    </nav>
+    <div class="logout">
+      <a href="configuracoes.html" class="nav-item">Configurações</a>
+      <a href="#" class="nav-item" id="btn-logout">Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1 style="font-size:26px;font-weight:800;text-transform:uppercase;margin:0;">Portfólio</h1>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin:4px 0 0;">Sua página pública pra compartilhar seus trabalhos — link único, sem precisar de login.</p>
+      </div>
+    </div>
+
+    <div class="link-bar">
+      <span class="badge-pub off" id="badge-pub">Não publicado</span>
+      <input type="text" id="link-publico" readonly value="Defina um link abaixo e salve para gerar sua página">
+      <button class="btn-secondary" id="btn-copiar-link" type="button">Copiar link</button>
+      <button class="btn-primary" id="btn-publicar" type="button">Publicar</button>
+    </div>
+
+    <div class="settings-card">
+      <h2>Perfil</h2>
+      <form id="form-perfil">
+        <div class="field-row">
+          <div class="field">
+            <label>Foto de perfil</label>
+            <label class="foto-drop" id="drop-perfil">
+              <img id="perfil-preview">
+              <div class="hint" id="hint-perfil">Clique para escolher (proporção quadrada funciona melhor)</div>
+              <input type="file" id="file-perfil" accept="image/png,image/jpeg,image/webp">
+            </label>
+          </div>
+          <div class="field">
+            <label>Foto de capa</label>
+            <label class="foto-drop" id="drop-capa">
+              <img id="capa-preview">
+              <div class="hint" id="hint-capa">Clique para escolher (formato largo, ex: 1600×500)</div>
+              <input type="file" id="file-capa" accept="image/png,image/jpeg,image/webp">
+            </label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-nome-exibicao">Nome de exibição</label>
+          <input type="text" id="f-nome-exibicao" placeholder="Como seu nome/estúdio vai aparecer na página">
+        </div>
+        <div class="field">
+          <label for="f-slug">Link da sua página</label>
+          <input type="text" id="f-slug" placeholder="seu-nome">
+        </div>
+        <div class="field">
+          <label for="f-bio">Biografia</label>
+          <textarea id="f-bio" maxlength="500" style="min-height:90px"></textarea>
+          <div class="char-counter"><span id="bio-count">0</span>/500</div>
+        </div>
+        <div class="status-msg" id="status-perfil"></div>
+        <button type="submit" class="btn-primary">Salvar perfil</button>
+      </form>
+    </div>
+
+    <div class="page-head" style="margin-top:8px;">
+      <h2 style="font-size:18px;margin:0;">Trabalhos em foto</h2>
+      <button class="btn-primary" id="btn-nova-cat-foto" type="button">+ Nova categoria</button>
+    </div>
+    <div id="area-categorias-foto"></div>
+
+    <div class="page-head" style="margin-top:24px;">
+      <h2 style="font-size:18px;margin:0;">Trabalhos em vídeo</h2>
+      <button class="btn-primary" id="btn-nova-cat-video" type="button">+ Nova categoria</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin:-8px 0 12px;">Cole o link de um vídeo já publicado no Instagram, YouTube ou TikTok.</p>
+    <div id="area-categorias-video"></div>
+  </main>
+</div>
+
+<div class="modal-overlay form-modal" id="modal-categoria" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h2 id="modal-cat-titulo">Nova categoria</h2></div>
+    <div class="modal-body">
+      <form id="form-categoria">
+        <div class="field">
+          <label for="cat-nome">Nome da categoria</label>
+          <input type="text" id="cat-nome" placeholder="Ex: Festa Infantil" required>
+        </div>
+        <div class="status-msg" id="status-categoria"></div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <div class="spacer"></div>
+      <button type="button" class="btn-secondary" id="btn-cancelar-categoria">Cancelar</button>
+      <button type="submit" form="form-categoria" class="btn-primary">Criar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=6';
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+  let tenant;
+  try {
+    const profile = await ensureProfileAndTenant(session.user);
+    tenant = profile.tenants;
+    if (!isTenantActiveNow(tenant)) window.location.href = 'login.html';
+    else if (!tenant.onboarding_completo) window.location.href = 'onboarding.html';
+  } catch (err) { console.error(err); window.location.href = 'login.html'; }
+
+  document.getElementById('btn-logout').addEventListener('click', async (e) => {
+    e.preventDefault(); await supabase.auth.signOut(); window.location.href = 'login.html';
+  });
+
+  function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+  function slugify(str) {
+    return (str || '')
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60);
+  }
+
+  function extensaoArquivo(file) {
+    const porNome = (file.name || '').split('.').pop();
+    if (porNome && porNome.length <= 5 && /^[a-zA-Z0-9]+$/.test(porNome)) return porNome.toLowerCase();
+    if (file.type === 'image/png') return 'png';
+    if (file.type === 'image/webp') return 'webp';
+    return 'jpg';
+  }
+
+  function linkPublico(slug) {
+    const base = window.location.href.replace(/portfolio\.html.*$/, 'portfolio-publico.html');
+    return `${base}?u=${encodeURIComponent(slug)}`;
+  }
+
+  // Detecta a plataforma do link de vídeo colado e devolve a URL de embed.
+  function detectarEmbed(url) {
+    try {
+      const u = new URL(url);
+      const host = u.hostname.replace('www.', '');
+
+      if (host === 'youtube.com' || host === 'm.youtube.com') {
+        let id = u.searchParams.get('v');
+        if (!id && u.pathname.startsWith('/shorts/')) id = u.pathname.split('/')[2];
+        if (id) return `https://www.youtube.com/embed/${id}`;
+      }
+      if (host === 'youtu.be') {
+        const id = u.pathname.slice(1);
+        if (id) return `https://www.youtube.com/embed/${id}`;
+      }
+      if (host === 'instagram.com') {
+        const m = u.pathname.match(/\/(reel|p|tv)\/([^/]+)/);
+        if (m) return `https://www.instagram.com/${m[1]}/${m[2]}/embed`;
+      }
+      if (host === 'tiktok.com') {
+        const m = u.pathname.match(/\/video\/(\d+)/);
+        if (m) return `https://www.tiktok.com/embed/v2/${m[1]}`;
+      }
+    } catch (e) { /* link inválido */ }
+    return null;
+  }
+
+  // ---------- Estado ----------
+  let portfolio = null;
+  let categorias = [];
+  let itensPorCategoria = {};
+
+  async function carregarTudo() {
+    const { data: p } = await supabase.from('portfolios').select('*').eq('tenant_id', tenant.id).maybeSingle();
+    portfolio = p;
+    preencherFormPerfil();
+    atualizarLinkBar();
+
+    const { data: cats } = await supabase.from('portfolio_categorias').select('*').order('created_at');
+    categorias = cats || [];
+
+    const { data: itens } = await supabase.from('portfolio_itens').select('*').order('created_at');
+    itensPorCategoria = {};
+    (itens || []).forEach(it => {
+      (itensPorCategoria[it.categoria_id] ||= []).push(it);
+    });
+
+    renderCategorias();
+  }
+
+  function preencherFormPerfil() {
+    document.getElementById('f-nome-exibicao').value = portfolio?.nome_exibicao || tenant.business_name || '';
+    document.getElementById('f-slug').value = portfolio?.slug || '';
+    document.getElementById('f-bio').value = portfolio?.bio || '';
+    document.getElementById('bio-count').textContent = (portfolio?.bio || '').length;
+    if (portfolio?.foto_perfil_url) {
+      document.getElementById('perfil-preview').src = portfolio.foto_perfil_url;
+      document.getElementById('perfil-preview').style.display = 'block';
+    }
+    if (portfolio?.foto_capa_url) {
+      document.getElementById('capa-preview').src = portfolio.foto_capa_url;
+      document.getElementById('capa-preview').style.display = 'block';
+    }
+  }
+
+  function atualizarLinkBar() {
+    const badge = document.getElementById('badge-pub');
+    const linkInput = document.getElementById('link-publico');
+    const btnPublicar = document.getElementById('btn-publicar');
+    const publicado = !!portfolio?.publicado;
+
+    badge.textContent = publicado ? 'Publicado' : 'Não publicado';
+    badge.className = 'badge-pub ' + (publicado ? 'on' : 'off');
+    btnPublicar.textContent = publicado ? 'Despublicar' : 'Publicar';
+
+    if (portfolio?.slug) {
+      linkInput.value = linkPublico(portfolio.slug);
+    } else {
+      linkInput.value = 'Defina um link abaixo e salve para gerar sua página';
+    }
+  }
+
+  document.getElementById('f-bio').addEventListener('input', (e) => {
+    document.getElementById('bio-count').textContent = e.target.value.length;
+  });
+
+  document.getElementById('btn-copiar-link').addEventListener('click', () => {
+    if (!portfolio?.slug) return;
+    navigator.clipboard.writeText(linkPublico(portfolio.slug));
+  });
+
+  document.getElementById('btn-publicar').addEventListener('click', async () => {
+    if (!portfolio?.id) { alert('Salve o perfil (com um link definido) antes de publicar.'); return; }
+    if (!portfolio.slug) { alert('Defina um link antes de publicar.'); return; }
+    const novoValor = !portfolio.publicado;
+    const { error } = await supabase.from('portfolios').update({ publicado: novoValor }).eq('id', portfolio.id);
+    if (error) { console.error(error); alert('Não foi possível atualizar: ' + error.message); return; }
+    portfolio.publicado = novoValor;
+    atualizarLinkBar();
+  });
+
+  ['file-perfil', 'file-capa'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+      const file = document.getElementById(id).files[0];
+      if (!file) return;
+      const previewId = id === 'file-perfil' ? 'perfil-preview' : 'capa-preview';
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = document.getElementById(previewId);
+        img.src = e.target.result;
+        img.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+
+  document.getElementById('form-perfil').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const statusEl = document.getElementById('status-perfil');
+    statusEl.className = 'status-msg';
+    statusEl.textContent = 'Salvando...';
+
+    const slug = slugify(document.getElementById('f-slug').value);
+    if (!slug) {
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Defina um link válido (só letras, números e hífen).';
+      return;
+    }
+
+    try {
+      let foto_perfil_url = portfolio?.foto_perfil_url || null;
+      let foto_capa_url = portfolio?.foto_capa_url || null;
+
+      const filePerfil = document.getElementById('file-perfil').files[0];
+      if (filePerfil) {
+        const path = `${tenant.id}/perfil.${extensaoArquivo(filePerfil)}`;
+        const { error: upErr } = await supabase.storage.from('portfolio').upload(path, filePerfil, { upsert: true });
+        if (upErr) throw upErr;
+        foto_perfil_url = supabase.storage.from('portfolio').getPublicUrl(path).data.publicUrl + '?t=' + Date.now();
+      }
+
+      const fileCapa = document.getElementById('file-capa').files[0];
+      if (fileCapa) {
+        const path = `${tenant.id}/capa.${extensaoArquivo(fileCapa)}`;
+        const { error: upErr } = await supabase.storage.from('portfolio').upload(path, fileCapa, { upsert: true });
+        if (upErr) throw upErr;
+        foto_capa_url = supabase.storage.from('portfolio').getPublicUrl(path).data.publicUrl + '?t=' + Date.now();
+      }
+
+      const payload = {
+        nome_exibicao: document.getElementById('f-nome-exibicao').value.trim() || tenant.business_name,
+        slug,
+        bio: document.getElementById('f-bio').value.trim() || null,
+        foto_perfil_url,
+        foto_capa_url,
+        updated_at: new Date().toISOString(),
+      };
+
+      let error;
+      if (portfolio?.id) {
+        ({ error } = await supabase.from('portfolios').update(payload).eq('id', portfolio.id));
+      } else {
+        ({ error } = await supabase.from('portfolios').insert({ ...payload, tenant_id: tenant.id }).select().maybeSingle());
+      }
+
+      if (error) {
+        if (error.code === '23505') throw new Error('Esse link já está em uso — escolha outro.');
+        throw error;
+      }
+
+      const { data: p } = await supabase.from('portfolios').select('*').eq('tenant_id', tenant.id).maybeSingle();
+      portfolio = p;
+      atualizarLinkBar();
+      statusEl.className = 'status-msg status-ok';
+      statusEl.textContent = 'Perfil salvo.';
+    } catch (err) {
+      console.error(err);
+      statusEl.className = 'status-msg status-erro';
+      statusEl.textContent = 'Não foi possível salvar: ' + (err.message || 'erro desconhecido');
+    }
+  });
+
+  // ---------- Categorias ----------
+  let tipoNovaCategoria = 'foto';
+  const modalCategoria = document.getElementById('modal-categoria');
+
+  function abrirModalCategoria(tipo) {
+    tipoNovaCategoria = tipo;
+    document.getElementById('modal-cat-titulo').textContent = tipo === 'foto' ? 'Nova categoria de fotos' : 'Nova categoria de vídeos';
+    document.getElementById('cat-nome').value = '';
+    document.getElementById('status-categoria').textContent = '';
+    modalCategoria.style.display = 'flex';
+  }
+  document.getElementById('btn-nova-cat-foto').addEventListener('click', () => abrirModalCategoria('foto'));
+  document.getElementById('btn-nova-cat-video').addEventListener('click', () => abrirModalCategoria('video'));
+  document.getElementById('btn-cancelar-categoria').addEventListener('click', () => modalCategoria.style.display = 'none');
+  modalCategoria.addEventListener('click', (e) => { if (e.target === modalCategoria) modalCategoria.style.display = 'none'; });
+
+  document.getElementById('form-categoria').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nome = document.getElementById('cat-nome').value.trim();
+    if (!nome) return;
+    if (!portfolio?.id) { alert('Salve o perfil antes de criar categorias.'); return; }
+
+    const { error } = await supabase.from('portfolio_categorias').insert({
+      tenant_id: tenant.id, tipo: tipoNovaCategoria, nome,
+    });
+    if (error) {
+      console.error(error);
+      document.getElementById('status-categoria').className = 'status-msg status-erro';
+      document.getElementById('status-categoria').textContent = 'Não foi possível criar: ' + error.message;
+      return;
+    }
+    modalCategoria.style.display = 'none';
+    await carregarTudo();
+  });
+
+  async function excluirCategoria(id) {
+    if (!confirm('Excluir esta categoria e tudo que está dentro dela?')) return;
+    await supabase.from('portfolio_categorias').delete().eq('id', id);
+    await carregarTudo();
+  }
+
+  function renderCategorias() {
+    const catsFoto = categorias.filter(c => c.tipo === 'foto');
+    const catsVideo = categorias.filter(c => c.tipo === 'video');
+
+    const areaFoto = document.getElementById('area-categorias-foto');
+    areaFoto.innerHTML = catsFoto.length
+      ? catsFoto.map(renderCategoriaFoto).join('')
+      : `<div class="empty-state">Nenhuma categoria de fotos ainda.</div>`;
+
+    const areaVideo = document.getElementById('area-categorias-video');
+    areaVideo.innerHTML = catsVideo.length
+      ? catsVideo.map(renderCategoriaVideo).join('')
+      : `<div class="empty-state">Nenhuma categoria de vídeos ainda.</div>`;
+
+    ligarEventosCategorias();
+  }
+
+  function renderCategoriaFoto(cat) {
+    const itens = itensPorCategoria[cat.id] || [];
+    return `
+      <div class="categoria-card" data-cat-id="${cat.id}">
+        <div class="categoria-head">
+          <h3>${escapeHtml(cat.nome)}</h3>
+          <button class="categoria-excluir" data-excluir-cat="${cat.id}" type="button">Excluir categoria</button>
+        </div>
+        <div class="itens-grid">
+          ${itens.map(it => `
+            <div class="item-foto">
+              <img src="${it.foto_url}" alt="">
+              <button class="item-remover" data-remover-item="${it.id}" data-foto-url="${escapeHtml(it.foto_url || '')}" type="button">×</button>
+            </div>
+          `).join('')}
+          <label class="item-add-foto" data-add-foto-cat="${cat.id}">
+            +
+            <input type="file" accept="image/png,image/jpeg,image/webp" multiple>
+          </label>
+        </div>
+      </div>`;
+  }
+
+  function renderCategoriaVideo(cat) {
+    const itens = itensPorCategoria[cat.id] || [];
+    return `
+      <div class="categoria-card" data-cat-id="${cat.id}">
+        <div class="categoria-head">
+          <h3>${escapeHtml(cat.nome)}</h3>
+          <button class="categoria-excluir" data-excluir-cat="${cat.id}" type="button">Excluir categoria</button>
+        </div>
+        <div class="itens-video-lista">
+          ${itens.map(it => {
+            const embed = detectarEmbed(it.video_url || '');
+            return `
+              <div class="item-video">
+                ${embed ? `<iframe src="${embed}" allowfullscreen></iframe>` : ''}
+                <div class="video-info">${escapeHtml(it.video_url || '')}</div>
+                <button class="item-remover" style="position:static" data-remover-item="${it.id}" type="button">×</button>
+              </div>`;
+          }).join('')}
+        </div>
+        <div class="video-add-form">
+          <input type="text" placeholder="Cole o link do vídeo (Instagram, YouTube ou TikTok)" data-video-input-cat="${cat.id}">
+          <button class="btn-secondary" type="button" data-add-video-cat="${cat.id}">Adicionar</button>
+        </div>
+      </div>`;
+  }
+
+  function ligarEventosCategorias() {
+    document.querySelectorAll('[data-excluir-cat]').forEach(btn => {
+      btn.addEventListener('click', () => excluirCategoria(btn.dataset.excluirCat));
+    });
+
+    document.querySelectorAll('[data-remover-item]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Remover este item?')) return;
+        const fotoUrl = btn.dataset.fotoUrl;
+        await supabase.from('portfolio_itens').delete().eq('id', btn.dataset.removerItem);
+        if (fotoUrl) {
+          const marker = '/object/public/portfolio/';
+          const idx = fotoUrl.indexOf(marker);
+          if (idx !== -1) {
+            const path = decodeURIComponent(fotoUrl.slice(idx + marker.length).split('?')[0]);
+            await supabase.storage.from('portfolio').remove([path]);
+          }
+        }
+        await carregarTudo();
+      });
+    });
+
+    document.querySelectorAll('[data-add-foto-cat]').forEach(label => {
+      const catId = label.dataset.addFotoCat;
+      const input = label.querySelector('input[type="file"]');
+      input.addEventListener('change', async () => {
+        const files = Array.from(input.files || []);
+        if (!files.length) return;
+        for (const file of files) {
+          const nomeArquivo = `${crypto.randomUUID()}.${extensaoArquivo(file)}`;
+          const path = `${tenant.id}/itens/${nomeArquivo}`;
+          const { error: upErr } = await supabase.storage.from('portfolio').upload(path, file);
+          if (upErr) { console.error(upErr); alert('Não foi possível subir uma das fotos: ' + upErr.message); continue; }
+          const foto_url = supabase.storage.from('portfolio').getPublicUrl(path).data.publicUrl;
+          await supabase.from('portfolio_itens').insert({
+            categoria_id: catId, tenant_id: tenant.id, tipo: 'foto', foto_url,
+          });
+        }
+        await carregarTudo();
+      });
+    });
+
+    document.querySelectorAll('[data-add-video-cat]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const catId = btn.dataset.addVideoCat;
+        const input = document.querySelector(`[data-video-input-cat="${catId}"]`);
+        const url = input.value.trim();
+        if (!url) return;
+        const { error } = await supabase.from('portfolio_itens').insert({
+          categoria_id: catId, tenant_id: tenant.id, tipo: 'video', video_url: url,
+        });
+        if (error) { console.error(error); alert('Não foi possível adicionar: ' + error.message); return; }
+        await carregarTudo();
+      });
+    });
+  }
+
+  carregarTudo();
+</script>
+</body>
+</html>
