@@ -44,6 +44,8 @@
       <a href="freelancer.html" class="nav-item">Freelancer</a>
       <div class="nav-section-label">Organização</div>
       <a href="conteudo.html" class="nav-item active">Conteúdo</a>
+
+      <a href="portfolio.html" class="nav-item">Portfólio</a>
       <a href="anotacoes.html" class="nav-item">Anotações</a>
       <a href="tarefas.html" class="nav-item">Tarefas</a>
       <a href="modelos.html" class="nav-item">Modelos de Pacote</a>
@@ -94,72 +96,16 @@
 
   function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
 
-  // ---------- Templates (réplica exata do studioflow.py) ----------
+  // ---------- Geração de conteúdo com IA (Edge Function gerar-conteudo) ----------
   const CONTENT_TYPES = ['Reels', 'Stories', 'Carrossel', 'Legenda', 'Título', 'CTA', 'Bastidores', 'Depoimento', 'Anúncio', 'Sequência de Stories'];
 
-  const TEMPLATES = {
-    'Reels': (t, c) => [
-      `Reels de bastidores do(a) ${t} de ${c}: capriche no áudio em alta e num corte dinâmico nos 3 primeiros segundos.`,
-      `Reels "antes e depois" mostrando o processo de edição de uma foto marcante do(a) ${t}.`,
-    ],
-    'Stories': (t, c) => [
-      `Stories em tempo real durante o(a) ${t}, com enquete "qual foto você quer ver primeiro?".`,
-      `Stories teaser com contagem regressiva para a entrega das fotos do(a) ${t} de ${c}.`,
-    ],
-    'Carrossel': (t, c) => [
-      `Carrossel com as melhores fotos do(a) ${t} de ${c}, uma por slide, fechando com convite para orçamento.`,
-      `Carrossel "3 momentos que mais marcaram" o(a) ${t}, contando a história por trás de cada foto.`,
-    ],
-    'Legenda': (t, c) => [
-      `"Cada detalhe do(a) ${t} de ${c} contado em imagem. Quer registrar o seu momento assim? Chama no direct."`,
-      `"Bastidores de um(a) ${t} inesquecível. Aqui, cada clique carrega uma história."`,
-    ],
-    'Título': (t, c) => [
-      `${t.charAt(0).toUpperCase() + t.slice(1)} de ${c}: os cliques que ficam`,
-      `Um olhar sobre o(a) ${t} de ${c}`,
-    ],
-    'CTA': (t, c) => [
-      `"Gostou do resultado? Manda mensagem e vamos planejar o seu ${t}."`,
-      `"Link na bio para orçamento — vagas limitadas este mês."`,
-    ],
-    'Bastidores': (t, c) => [
-      `Vídeo curto mostrando a montagem do equipamento antes do(a) ${t} de ${c}.`,
-      `Sequência de fotos dos bastidores: luz sendo ajustada, referência combinada com o cliente.`,
-    ],
-    'Depoimento': (t, c) => [
-      `Pedir para ${c} gravar um áudio ou vídeo curto contando como foi a experiência do(a) ${t}.`,
-      `Print de uma mensagem de agradecimento, publicado em formato de story fixado.`,
-    ],
-    'Anúncio': (t, c) => [
-      `Anúncio patrocinado com a melhor foto do(a) ${t} de ${c} + CTA "orçamento sem compromisso".`,
-      `Anúncio de retargeting mostrando bastidores para quem já visitou o perfil.`,
-    ],
-    'Sequência de Stories': (t, c) => [
-      `1) Capa do trabalho → 2) bastidor → 3) detalhe marcante → 4) enquete → 5) CTA de orçamento.`,
-    ],
-  };
-
-  function generateSuggestions(tipo, cliente) {
-    const t = (tipo || 'trabalho').toLowerCase();
-    const out = {};
-    CONTENT_TYPES.forEach(ct => out[ct] = TEMPLATES[ct](t, cliente));
-    return out;
-  }
-
-  function generate30Days(tipo, cliente, startDate) {
-    const t = (tipo || 'trabalho').toLowerCase();
-    const cycle = ['Bastidores', 'Stories', 'Reels', 'Carrossel', 'Sequência de Stories', 'Depoimento', 'Anúncio'];
-    const start = startDate ? new Date(startDate + 'T00:00:00') : new Date();
-    const dias = [];
-    for (let i = 0; i < 30; i++) {
-      const ct = cycle[i % cycle.length];
-      const variants = TEMPLATES[ct](t, cliente);
-      const idea = variants[i % variants.length];
-      const date = new Date(start.getTime() + i * 24 * 60 * 60 * 1000);
-      const dataStr = String(date.getDate()).padStart(2,'0') + '/' + String(date.getMonth()+1).padStart(2,'0') + '/' + date.getFullYear();
-      dias.push({ dia: i + 1, data: dataStr, tipo: ct, idea });
-    }
-    return dias;
+  async function gerarComIA(jobId, modo) {
+    const { data, error } = await supabase.functions.invoke('gerar-conteudo', {
+      body: { job_id: jobId, modo },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
   }
 
   // ---------- Carrega jobs para o seletor ----------
@@ -183,41 +129,75 @@
     return jobsCache.find(j => j.id === id) || null;
   }
 
-  document.getElementById('btn-sugestoes').addEventListener('click', () => {
+  function setBotoesDesabilitados(desabilitado) {
+    document.getElementById('btn-sugestoes').disabled = desabilitado;
+    document.getElementById('btn-30dias').disabled = desabilitado;
+  }
+
+  document.getElementById('btn-sugestoes').addEventListener('click', async () => {
     const job = jobSelecionado();
     if (!job) { alert('Cadastre e selecione um trabalho primeiro.'); return; }
     const clienteNome = job.clients ? job.clients.nome : 'cliente';
-    const sugg = generateSuggestions(job.tipo_trabalho, clienteNome);
+    const outputEl = document.getElementById('area-output');
 
-    document.getElementById('area-output').innerHTML = `
-      <h2 class="section-title">Sugestões para ${escapeHtml(clienteNome)} <span class="count">${escapeHtml(job.tipo_trabalho || '')}</span></h2>
-      <div class="conteudo-grid">
-        ${CONTENT_TYPES.map(ct => `
-          <div class="conteudo-card">
-            <div class="tipo">${ct}</div>
-            ${sugg[ct].map(idea => `<div class="ideia">${escapeHtml(idea)}</div>`).join('')}
-          </div>
-        `).join('')}
-      </div>`;
+    setBotoesDesabilitados(true);
+    outputEl.innerHTML = `<div class="pipeline-empty">Gerando sugestões com IA...</div>`;
+
+    try {
+      const { sugestoes } = await gerarComIA(job.id, 'sugestoes');
+      outputEl.innerHTML = `
+        <h2 class="section-title">Sugestões para ${escapeHtml(clienteNome)} <span class="count">${escapeHtml(job.tipo_trabalho || '')}</span></h2>
+        <div class="conteudo-grid">
+          ${CONTENT_TYPES.map(ct => `
+            <div class="conteudo-card">
+              <div class="tipo">${ct}</div>
+              ${(sugestoes[ct] || []).map(idea => `<div class="ideia">${escapeHtml(idea)}</div>`).join('')}
+            </div>
+          `).join('')}
+        </div>`;
+    } catch (err) {
+      console.error(err);
+      outputEl.innerHTML = `<div class="pipeline-empty">Não foi possível gerar as sugestões: ${escapeHtml(err.message || 'erro desconhecido')}</div>`;
+    } finally {
+      setBotoesDesabilitados(false);
+    }
   });
 
-  document.getElementById('btn-30dias').addEventListener('click', () => {
+  document.getElementById('btn-30dias').addEventListener('click', async () => {
     const job = jobSelecionado();
     if (!job) { alert('Cadastre e selecione um trabalho primeiro.'); return; }
     const clienteNome = job.clients ? job.clients.nome : 'cliente';
-    const dias = generate30Days(job.tipo_trabalho, clienteNome, job.data_evento);
+    const outputEl = document.getElementById('area-output');
 
-    document.getElementById('area-output').innerHTML = `
-      <h2 class="section-title">30 dias de conteúdo — ${escapeHtml(clienteNome)} <span class="count">${escapeHtml(job.tipo_trabalho || '')}</span></h2>
-      <div class="list-card" style="padding:6px 10px;">
-        ${dias.map(d => `
-          <div class="dia-row">
-            <span class="dia-lbl">Dia ${d.dia} · ${d.data}</span>
-            <span class="dia-tipo">${d.tipo}</span>
-            <span class="dia-ideia">${escapeHtml(d.idea)}</span>
-          </div>
-        `).join('')}
-      </div>`;
+    setBotoesDesabilitados(true);
+    outputEl.innerHTML = `<div class="pipeline-empty">Gerando plano de 30 dias com IA... isso pode levar alguns segundos.</div>`;
+
+    try {
+      const { dias: diasIA } = await gerarComIA(job.id, '30dias');
+      const start = job.data_evento ? new Date(job.data_evento + 'T00:00:00') : new Date();
+      const dias = diasIA.map((d, i) => {
+        const date = new Date(start.getTime() + i * 24 * 60 * 60 * 1000);
+        const dataStr = String(date.getDate()).padStart(2,'0') + '/' + String(date.getMonth()+1).padStart(2,'0') + '/' + date.getFullYear();
+        return { dia: i + 1, data: dataStr, tipo: d.tipo, idea: d.idea };
+      });
+
+      outputEl.innerHTML = `
+        <h2 class="section-title">30 dias de conteúdo — ${escapeHtml(clienteNome)} <span class="count">${escapeHtml(job.tipo_trabalho || '')}</span></h2>
+        <div class="list-card" style="padding:6px 10px;">
+          ${dias.map(d => `
+            <div class="dia-row">
+              <span class="dia-lbl">Dia ${d.dia} · ${d.data}</span>
+              <span class="dia-tipo">${escapeHtml(d.tipo || '')}</span>
+              <span class="dia-ideia">${escapeHtml(d.idea || '')}</span>
+            </div>
+          `).join('')}
+        </div>`;
+    } catch (err) {
+      console.error(err);
+      outputEl.innerHTML = `<div class="pipeline-empty">Não foi possível gerar o plano: ${escapeHtml(err.message || 'erro desconhecido')}</div>`;
+    } finally {
+      setBotoesDesabilitados(false);
+    }
   });
 
   carregarJobs();
