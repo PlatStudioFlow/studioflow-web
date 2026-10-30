@@ -67,7 +67,10 @@
   <main class="main">
     <div class="page-head">
       <h1 style="font-size:26px;font-weight:800;text-transform:uppercase;margin:0;">Orçamentos</h1>
-      <button class="btn-primary" id="btn-novo">+ Novo orçamento</button>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-secondary" id="btn-modelo-padrao">Editar modelo padrão</button>
+        <button class="btn-primary" id="btn-novo">+ Novo orçamento</button>
+      </div>
     </div>
 
     <div id="area-lista">
@@ -165,6 +168,38 @@
       <div class="spacer"></div>
       <button type="button" class="btn-secondary" id="btn-cancelar-job">Cancelar</button>
       <button type="submit" form="form-job" id="btn-salvar-job">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal do modelo padrão de orçamento (vale para todo orçamento novo) -->
+<div class="modal-overlay form-modal" id="modal-modelo-padrao" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>Modelo padrão de orçamento</h2>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 14px;">Esses valores preenchem automaticamente todo orçamento novo que você criar, pra qualquer cliente. Você ainda pode ajustar em cada orçamento individualmente.</p>
+      <form id="form-modelo-padrao">
+        <div class="field">
+          <label for="fm-prazo">Prazo de entrega (dias úteis)</label>
+          <input type="text" id="fm-prazo">
+        </div>
+        <div class="field">
+          <label for="fm-notas">Notas</label>
+          <textarea id="fm-notas"></textarea>
+        </div>
+        <div class="field">
+          <label for="fm-termos">Termos e condições (impresso no orçamento)</label>
+          <textarea id="fm-termos" style="min-height:140px"></textarea>
+        </div>
+        <div class="status-msg" id="status-modelo-padrao"></div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <div class="spacer"></div>
+      <button type="button" class="btn-secondary" id="btn-cancelar-modelo">Cancelar</button>
+      <button type="submit" form="form-modelo-padrao" class="btn-primary">Salvar modelo</button>
     </div>
   </div>
 </div>
@@ -347,9 +382,7 @@
     statusEl.className = 'status-msg';
     pkgHolder.innerHTML = '';
 
-    const { data: clients } = await supabase.from('clients')
-      .select('id, nome, orcamento_prazo_padrao, orcamento_notas_padrao, orcamento_termos_padrao')
-      .order('nome');
+    const { data: clients } = await supabase.from('clients').select('id, nome').order('nome');
     clientesCache = clients || [];
     const selectCliente = document.getElementById('f-cliente');
     selectCliente.innerHTML = clientesCache.length
@@ -397,7 +430,9 @@
       document.getElementById('f-horario').value = '';
       document.getElementById('f-local').value = '';
       document.getElementById('f-fotos').value = '0';
-      aplicarPadraoCliente(selectCliente.value);
+      document.getElementById('f-prazo').value = tenant.orcamento_prazo_padrao ?? 7;
+      document.getElementById('f-notas').value = tenant.orcamento_notas_padrao || '';
+      document.getElementById('f-termos').value = tenant.orcamento_termos_padrao || DEFAULT_TERMOS;
       addPkgRow();
     }
 
@@ -406,22 +441,40 @@
 
   function fecharModal() { modal.style.display = 'none'; }
 
-  // Aplica o padrão salvo do cliente (prazo/notas/termos) nos campos do
-  // orçamento. Só roda ao criar um trabalho novo — editar um já existente
-  // nunca sobrescreve o que já estava salvo nele.
-  function aplicarPadraoCliente(clientId) {
-    const cliente = clientesCache.find(c => c.id === clientId);
-    document.getElementById('f-prazo').value = cliente?.orcamento_prazo_padrao ?? 7;
-    document.getElementById('f-notas').value = cliente?.orcamento_notas_padrao || '';
-    document.getElementById('f-termos').value = cliente?.orcamento_termos_padrao || DEFAULT_TERMOS;
-  }
-
-  document.getElementById('f-cliente').addEventListener('change', (e) => {
-    if (editandoId) return;
-    aplicarPadraoCliente(e.target.value);
-  });
-
   document.getElementById('btn-novo').addEventListener('click', () => abrirModal(null));
+
+  // --- Modelo padrão de orçamento (vale para todo orçamento novo, de qualquer cliente) ---
+  const modalModelo = document.getElementById('modal-modelo-padrao');
+  const statusModelo = document.getElementById('status-modelo-padrao');
+
+  document.getElementById('btn-modelo-padrao').addEventListener('click', () => {
+    document.getElementById('fm-prazo').value = tenant.orcamento_prazo_padrao ?? 7;
+    document.getElementById('fm-notas').value = tenant.orcamento_notas_padrao || '';
+    document.getElementById('fm-termos').value = tenant.orcamento_termos_padrao || DEFAULT_TERMOS;
+    statusModelo.textContent = '';
+    statusModelo.className = 'status-msg';
+    modalModelo.style.display = 'flex';
+  });
+  document.getElementById('btn-cancelar-modelo').addEventListener('click', () => modalModelo.style.display = 'none');
+  modalModelo.addEventListener('click', (e) => { if (e.target === modalModelo) modalModelo.style.display = 'none'; });
+
+  document.getElementById('form-modelo-padrao').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      orcamento_prazo_padrao: parseInt(document.getElementById('fm-prazo').value, 10) || null,
+      orcamento_notas_padrao: document.getElementById('fm-notas').value.trim() || null,
+      orcamento_termos_padrao: document.getElementById('fm-termos').value.trim() || null,
+    };
+    const { error } = await supabase.from('tenants').update(payload).eq('id', tenant.id);
+    if (error) {
+      console.error(error);
+      statusModelo.className = 'status-msg status-erro';
+      statusModelo.textContent = 'Não foi possível salvar: ' + error.message;
+      return;
+    }
+    Object.assign(tenant, payload);
+    modalModelo.style.display = 'none';
+  });
   document.getElementById('btn-cancelar-job').addEventListener('click', fecharModal);
   modal.addEventListener('click', (e) => { if (e.target === modal) fecharModal(); });
 
