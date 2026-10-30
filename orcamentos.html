@@ -347,7 +347,9 @@
     statusEl.className = 'status-msg';
     pkgHolder.innerHTML = '';
 
-    const { data: clients } = await supabase.from('clients').select('id, nome').order('nome');
+    const { data: clients } = await supabase.from('clients')
+      .select('id, nome, orcamento_prazo_padrao, orcamento_notas_padrao, orcamento_termos_padrao')
+      .order('nome');
     clientesCache = clients || [];
     const selectCliente = document.getElementById('f-cliente');
     selectCliente.innerHTML = clientesCache.length
@@ -394,10 +396,8 @@
       document.getElementById('f-data').value = '';
       document.getElementById('f-horario').value = '';
       document.getElementById('f-local').value = '';
-      document.getElementById('f-prazo').value = '7';
       document.getElementById('f-fotos').value = '0';
-      document.getElementById('f-notas').value = '';
-      document.getElementById('f-termos').value = DEFAULT_TERMOS;
+      aplicarPadraoCliente(selectCliente.value);
       addPkgRow();
     }
 
@@ -405,6 +405,21 @@
   }
 
   function fecharModal() { modal.style.display = 'none'; }
+
+  // Aplica o padrão salvo do cliente (prazo/notas/termos) nos campos do
+  // orçamento. Só roda ao criar um trabalho novo — editar um já existente
+  // nunca sobrescreve o que já estava salvo nele.
+  function aplicarPadraoCliente(clientId) {
+    const cliente = clientesCache.find(c => c.id === clientId);
+    document.getElementById('f-prazo').value = cliente?.orcamento_prazo_padrao ?? 7;
+    document.getElementById('f-notas').value = cliente?.orcamento_notas_padrao || '';
+    document.getElementById('f-termos').value = cliente?.orcamento_termos_padrao || DEFAULT_TERMOS;
+  }
+
+  document.getElementById('f-cliente').addEventListener('change', (e) => {
+    if (editandoId) return;
+    aplicarPadraoCliente(e.target.value);
+  });
 
   document.getElementById('btn-novo').addEventListener('click', () => abrirModal(null));
   document.getElementById('btn-cancelar-job').addEventListener('click', fecharModal);

@@ -104,6 +104,23 @@
           <label for="f-notas">Notas</label>
           <textarea id="f-notas"></textarea>
         </div>
+
+        <hr class="job-divider">
+        <div class="job-section-label">Padrão de orçamento para este cliente</div>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 12px;">Preenche automaticamente um orçamento novo criado pra este cliente. Deixe em branco pra usar o padrão geral do sistema.</p>
+        <div class="field">
+          <label for="f-prazo-padrao">Prazo de entrega (dias úteis)</label>
+          <input type="text" id="f-prazo-padrao" placeholder="7">
+        </div>
+        <div class="field">
+          <label for="f-notas-orcamento-padrao">Notas (no orçamento)</label>
+          <textarea id="f-notas-orcamento-padrao"></textarea>
+        </div>
+        <div class="field">
+          <label for="f-termos-padrao">Termos e condições (impresso no orçamento)</label>
+          <textarea id="f-termos-padrao" style="min-height:110px" placeholder="Deixe em branco para usar os termos padrão do sistema"></textarea>
+        </div>
+
         <div class="status-msg" id="status-cliente"></div>
       </form>
     </div>
@@ -156,6 +173,9 @@
     document.getElementById('f-email').value = cliente?.email || '';
     document.getElementById('f-instagram').value = cliente?.instagram || '';
     document.getElementById('f-notas').value = cliente?.notas || '';
+    document.getElementById('f-prazo-padrao').value = cliente?.orcamento_prazo_padrao ?? '';
+    document.getElementById('f-notas-orcamento-padrao').value = cliente?.orcamento_notas_padrao || '';
+    document.getElementById('f-termos-padrao').value = cliente?.orcamento_termos_padrao || '';
     statusEl.textContent = '';
     statusEl.className = 'status-msg';
     modal.style.display = 'flex';
@@ -182,6 +202,9 @@
       email: document.getElementById('f-email').value.trim() || null,
       instagram: document.getElementById('f-instagram').value.trim() || null,
       notas: document.getElementById('f-notas').value.trim() || null,
+      orcamento_prazo_padrao: parseInt(document.getElementById('f-prazo-padrao').value, 10) || null,
+      orcamento_notas_padrao: document.getElementById('f-notas-orcamento-padrao').value.trim() || null,
+      orcamento_termos_padrao: document.getElementById('f-termos-padrao').value.trim() || null,
     };
 
     let error;
