@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contratos — StudioFlow</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=3">
+<style>
+  .nav-section-label {
+    font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--sidebar-text-dim); padding: 16px 12px 4px;
+  }
+
+  /* ---------- layout da tela de contrato ---------- */
+  .ct-grid { display: grid; grid-template-columns: minmax(340px, 440px) 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 1100px) { .ct-grid { grid-template-columns: 1fr; } }
+
+  .ct-card { background: var(--card-bg); border: 1px solid var(--line); border-radius: 10px; padding: 18px 18px 6px; margin-bottom: 14px; }
+  .ct-card h3 { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--blue-dark); margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
+  .ct-card h3 .n { width: 20px; height: 20px; border-radius: 50%; background: var(--blue); color: #fff; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; }
+  .ct-card .field { margin-bottom: 12px; }
+  .ct-card .field input, .ct-card .field textarea, .ct-card .field select {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 6px;
+    font-family: var(--font-body); font-size: 14px; background: var(--bg); color: var(--ink);
+  }
+  .ct-card .field textarea { min-height: 70px; resize: vertical; }
+  .ct-card .field input:focus, .ct-card .field textarea:focus, .ct-card .field select:focus {
+    outline: none; border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(47,125,224,.14);
+  }
+  .ct-card .field small { font-size: 11.5px; color: var(--ink-faint); margin-top: 4px; display: block; }
+  .ct-card .field-row { display: flex; gap: 10px; }
+  .ct-card .field-row .field { flex: 1; min-width: 0; }
+  .ct-card .field.vazio input, .ct-card .field.vazio textarea, .ct-card .field.vazio select { border-color: #F0C878; background: #FFFBF0; }
+  .ct-card .field.flash input, .ct-card .field.flash textarea, .ct-card .field.flash select { box-shadow: 0 0 0 3px rgba(240,170,40,.45); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 12px; }
+  .chip { font-size: 12px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface2); color: var(--ink); cursor: pointer; font-family: var(--font-body); }
+  .chip:hover { border-color: var(--blue); color: var(--blue-dark); }
+
+  .ct-actions { position: sticky; bottom: 0; background: var(--bg); padding: 12px 0 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; z-index: 2; }
+  .ct-actions .btn-primary, .ct-actions .btn-secondary { width: auto; }
+  .ct-faltam { font-size: 12.5px; color: var(--pending); font-weight: 600; flex-basis: 100%; }
+  .ct-faltam.ok { color: var(--ok); }
+
+  .ct-sign-row { display: flex; align-items: center; gap: 12px; padding: 4px 0 14px; }
+  .ct-sign-thumb { width: 130px; height: 52px; border: 1px dashed var(--line); border-radius: 6px; background: #fff center/contain no-repeat; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--ink-faint); }
+  .ct-check { display: flex; gap: 8px; align-items: flex-start; font-size: 13.5px; cursor: pointer; }
+  .ct-check input { margin-top: 2px; }
+
+  .btn-secondary, .btn-ghost-sm { padding: 9px 14px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface2); color: var(--ink); font-weight: 600; font-size: 13.5px; cursor: pointer; font-family: var(--font-body); }
+  .btn-secondary:hover, .btn-ghost-sm:hover { background: var(--line); }
+  .btn-ghost-sm { padding: 6px 10px; font-size: 12.5px; }
+
+  /* ---------- pré-visualização (folha A4) ---------- */
+  .ct-preview-wrap { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; background: #E9E6EF; border-radius: 10px; padding: 22px; }
+  @media (max-width: 1100px) { .ct-preview-wrap { position: static; max-height: none; } }
+  .ct-preview-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); margin-bottom: 10px; display: flex; justify-content: space-between; }
+  .ct-paper { background: #fff; max-width: 720px; margin: 0 auto; padding: 46px 56px 56px; box-shadow: 0 2px 14px rgba(0,0,0,.08); color: #1A1A1A; font-family: Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.55; }
+  .ct-paper .logo { display: block; width: 190px; margin: 0 auto 22px; }
+  .ct-paper .titulo { text-align: center; font-weight: 700; font-size: 14.5px; margin-bottom: 18px; }
+  .ct-paper p { text-align: justify; margin: 0 0 9px; white-space: pre-line; }
+  .ct-paper .h { color: #1F5FA8; font-weight: 700; margin-top: 16px; margin-bottom: 4px; }
+  .ct-paper .accent { color: #1F5FA8; }
+  .ct-paper .v { background: #E4F0FC; color: #154D8A; border-radius: 3px; padding: 0 2px; cursor: pointer; }
+  .ct-paper .v.vazio { background: #FFF1CC; color: #9A6A00; }
+  .ct-paper .v:hover { outline: 1px solid currentColor; }
+  .ct-paper .assin { display: flex; justify-content: space-between; gap: 30px; margin-top: 54px; text-align: center; font-size: 11.5px; }
+  .ct-paper .assin > div { flex: 1; position: relative; }
+  .ct-paper .assin .linha { border-top: 1px solid #444; padding-top: 6px; font-weight: 700; font-size: 12.5px; }
+  .ct-paper .assin .sub { color: #8A8A8A; }
+  .ct-paper .assin img { position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, 6px); max-width: 190px; max-height: 70px; }
+
+  /* ---------- abas + lista de enviados ---------- */
+  .ct-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: -6px 0 20px; }
+  .ct-tab { background: none; border: none; border-bottom: 2.5px solid transparent; padding: 10px 14px; font: inherit; font-weight: 700; font-size: 14px; color: var(--ink-soft); cursor: pointer; margin-bottom: -1px; width: auto; }
+  .ct-tab.active { color: var(--blue-dark); border-bottom-color: var(--blue); }
+  .ct-tab .badge { background: var(--pending-bg); color: var(--pending); font-size: 11px; border-radius: 999px; padding: 1px 7px; margin-left: 4px; }
+  .st { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .st.pendente { background: var(--pending-bg); color: var(--pending); }
+  .st.assinado { background: var(--ok-bg); color: var(--ok); }
+  .st.cancelado { background: var(--surface2); color: var(--ink-faint); }
+  .st-sub { display: block; font-size: 11.5px; color: var(--ink-faint); margin-top: 3px; }
+  .list-card td .acoes { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+  .list-card tbody tr.sem-click { cursor: default; }
+  .setup-box { background: var(--card-bg); border: 1px solid var(--line); border-radius: 10px; padding: 20px; font-size: 14px; line-height: 1.6; }
+  .setup-box code { background: var(--surface2); padding: 1px 6px; border-radius: 4px; }
+  .link-box { display: flex; gap: 8px; margin: 6px 0 14px; }
+  .link-box input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-family: var(--font-body); font-size: 13px; background: var(--bg); }
+  .btn-whats { background: #25D366 !important; color: #fff !important; }
+  .btn-whats:hover { background: #1EB257 !important; }
+
+  /* ---------- modal de assinatura ---------- */
+  .sig-pad { width: 100%; height: 190px; border: 1px solid var(--line); border-radius: 8px; background: #fff; touch-action: none; display: block; cursor: crosshair; }
+  .sig-tools { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .modal-box .modal-foot .btn-secondary { background: var(--surface2); color: var(--ink); }
+  .modal-box .modal-foot .btn-secondary:hover { background: var(--line); }
+  .modal-box .modal-foot .btn-ghost-sm { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); width: auto; }
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E1F">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="app">
+<script type="module" src="js/mobile-nav.js?v=1"></script>
+<script type="module" src="js/search.js?v=1"></script>
+
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="mark">
+      <img src="assets/logo.png" alt="StudioFlow" class="icon">
+      <div class="wordmark">Studio<span>Flow</span></div>
+    </div>
+    <div class="tagline">Gestão para criativos</div>
+
+    <nav>
+      <a href="dashboard.html" class="nav-item">Dashboard</a>
+      <div class="nav-section-label">Operação</div>
+      <a href="pipeline.html" class="nav-item">Pipeline</a>
+      <a href="orcamentos.html" class="nav-item">Orçamentos</a>
+      <a href="contratos.html" class="nav-item active">Contratos</a>
+      <a href="agenda.html" class="nav-item">Agenda</a>
+      <a href="entregas.html" class="nav-item">Entregas</a>
+      <a href="clientes.html" class="nav-item">Clientes</a>
+      <div class="nav-section-label">Financeiro</div>
+      <a href="financeiro.html" class="nav-item">Financeiro</a>
+      <a href="freelancer.html" class="nav-item">Freelancer</a>
+      <div class="nav-section-label">Organização</div>
+      <a href="conteudo.html" class="nav-item">Conteúdo</a>
+
+      <a href="portfolio.html" class="nav-item">Portfólio</a>
+      <a href="anotacoes.html" class="nav-item">Anotações</a>
+      <a href="tarefas.html" class="nav-item">Tarefas</a>
+      <a href="modelos.html" class="nav-item">Modelos de Pacote</a>
+      <a href="faq.html" class="nav-item">Ajuda / FAQ</a>
+    </nav>
+
+    <div class="logout">
+      <a href="configuracoes.html" class="nav-item">Configurações</a>
+      <a href="#" class="nav-item" id="btn-logout">Sair</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <h1 style="font-size:26px;font-weight:800;text-transform:uppercase;margin:0;">Contratos</h1>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button type="button" class="btn-secondary" id="btn-dados-contratado">Meus dados no contrato</button>
+        <button type="button" class="btn-secondary" id="btn-minha-assinatura">Minha assinatura</button>
+      </div>
+    </div>
+
+    <div class="ct-tabs">
+      <button type="button" class="ct-tab active" data-tab="novo">Novo contrato</button>
+      <button type="button" class="ct-tab" data-tab="enviados">Enviados <span class="badge" id="badge-pend" style="display:none"></span></button>
+    </div>
+
+    <div id="tab-enviados" style="display:none">
+      <div id="area-enviados"><div class="empty-state">Carregando...</div></div>
+    </div>
+
+    <div class="ct-grid" id="tab-novo">
+      <!-- ================= FORMULÁRIO ================= -->
+      <form id="form-contrato" autocomplete="off">
+
+        <div class="ct-card">
+          <h3>Puxar de um trabalho <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--ink-faint)">(opcional)</span></h3>
+          <div class="field">
+            <select id="c-job"><option value="">Carregando trabalhos…</option></select>
+            <small>Preenche cliente, data, horário, local, serviço e valor a partir do orçamento.</small>
+          </div>
+          <div class="field" id="wrap-pacote" style="display:none">
+            <label>Pacote fechado</label>
+            <select id="c-pacote"></select>
+          </div>
+        </div>
+
+        <div class="ct-card">
+          <h3><span class="n">1</span> Contratante</h3>
+          <div class="field" data-k="contratante_nome">
+            <label for="c-contratante_nome">Nome completo</label>
+            <input type="text" id="c-contratante_nome">
+          </div>
+          <div class="field-row">
+            <div class="field" data-k="contratante_qualificacao">
+              <label for="c-contratante_qualificacao">Nacionalidade, est. civil</label>
+              <input type="text" id="c-contratante_qualificacao" placeholder="brasileira, casada">
+            </div>
+            <div class="field" data-k="contratante_cpf">
+              <label for="c-contratante_cpf">CPF</label>
+              <input type="text" id="c-contratante_cpf" inputmode="numeric" placeholder="000.000.000-00">
+            </div>
+          </div>
+          <div class="field" data-k="contratante_endereco">
+            <label for="c-contratante_endereco">Endereço</label>
+            <input type="text" id="c-contratante_endereco" placeholder="Rua, nº - Bairro - Cidade/UF">
+          </div>
+        </div>
+
+        <div class="ct-card">
+          <h3><span class="n">2</span> Evento (Cláusula 1)</h3>
+          <div class="field-row">
+            <div class="field" data-k="servico">
+              <label for="c-servico">Serviço</label>
+              <select id="c-servico">
+                <option value="">—</option>
+                <option>fotografia</option>
+                <option>filmagem</option>
+                <option>fotografia e filmagem</option>
+              </select>
+            </div>
+            <div class="field" data-k="data_evento">
+              <label for="c-data_evento">Data do evento</label>
+              <input type="date" id="c-data_evento">
+            </div>
+          </div>
+          <div class="field" data-k="evento">
+            <label for="c-evento">Evento</label>
+            <input type="text" id="c-evento" placeholder="Ex: Aniversário de 1 ano da Alice">
+          </div>
+          <div class="field-row">
+            <div class="field" data-k="hora_inicio">
+              <label for="c-hora_inicio">Cobertura das</label>
+              <input type="time" id="c-hora_inicio">
+            </div>
+            <div class="field" data-k="hora_fim">
+              <label for="c-hora_fim">às</label>
+              <input type="time" id="c-hora_fim">
+            </div>
+            <div class="field" data-k="horas">
+              <label for="c-horas">Total (h)</label>
+              <input type="text" id="c-horas" inputmode="decimal" placeholder="auto">
+            </div>
+          </div>
+          <div class="field" data-k="horario_evento">
+            <label for="c-horario_evento">Horário do evento</label>
+            <input type="time" id="c-horario_evento">
+            <small>Acompanha o início da cobertura, a menos que você altere.</small>
+          </div>
+          <div class="field" data-k="local">
+            <label for="c-local">Local</label>
+            <input type="text" id="c-local" placeholder="Nome do espaço, endereço - Cidade/UF">
+          </div>
+        </div>
+
+        <div class="ct-card">
+          <h3><span class="n">3</span> Equipe (Cláusula 2)</h3>
+          <div class="field-row">
+            <div class="field" data-k="qtd_profissionais" style="flex:0 0 120px">
+              <label for="c-qtd_profissionais">Profissionais</label>
+              <input type="number" id="c-qtd_profissionais" min="1" max="20" value="1">
+            </div>
+            <div class="field" data-k="modalidade">
+              <label for="c-modalidade">Modalidade</label>
+              <input type="text" id="c-modalidade" placeholder="igual ao serviço">
+            </div>
+          </div>
+        </div>
+
+        <div class="ct-card">
+          <h3><span class="n">4</span> Pagamento (Cláusula 4)</h3>
+          <div class="field" data-k="valor">
+            <label for="c-valor">Valor total (R$)</label>
+            <input type="text" id="c-valor" inputmode="decimal" placeholder="2.500,00">
+            <small id="valor-extenso">O valor por extenso é escrito automaticamente.</small>
+          </div>
+          <div class="field" data-k="pagamento">
+            <label for="c-pagamento">Forma de pagamento</label>
+            <textarea id="c-pagamento"></textarea>
+          </div>
+          <div class="chips">
+            <button type="button" class="chip" data-preset="pix">À vista no PIX</button>
+            <button type="button" class="chip" data-preset="sinal">Sinal 10% + restante</button>
+            <button type="button" class="chip" data-preset="cartao">Cartão em até 12x</button>
+          </div>
+        </div>
+
+        <div class="ct-card">
+          <h3><span class="n">5</span> Data e assinatura</h3>
+          <div class="field" data-k="data_assinatura">
+            <label for="c-data_assinatura">Data do contrato</label>
+            <input type="date" id="c-data_assinatura">
+          </div>
+          <div class="ct-sign-row">
+            <div class="ct-sign-thumb" id="sign-thumb">sem assinatura</div>
+            <label class="ct-check">
+              <input type="checkbox" id="c-assinar">
+              <span>Já sair <b>assinado por mim</b> (CONTRATADO)<br><small style="color:var(--ink-faint)" id="sign-hint">Cadastre sua assinatura em "Minha assinatura".</small></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="ct-actions">
+          <button type="button" class="btn-primary" id="btn-enviar">Enviar para o cliente assinar</button>
+          <button type="button" class="btn-secondary" id="btn-gerar">Só gerar PDF</button>
+          <button type="button" class="btn-secondary" id="btn-limpar">Limpar</button>
+          <div class="ct-faltam" id="ct-faltam"></div>
+        </div>
+      </form>
+
+      <!-- ================= PRÉ-VISUALIZAÇÃO ================= -->
+      <div class="ct-preview-wrap">
+        <div class="ct-preview-label"><span>Pré-visualização</span><span style="font-weight:600;text-transform:none;letter-spacing:0">clique num campo do texto para editar</span></div>
+        <div class="ct-paper" id="ct-paper"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal: dados do contratado -->
+<div class="modal-overlay form-modal" id="modal-contratado" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head"><h2>Meus dados no contrato</h2></div>
+    <div class="modal-body">
+      <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 14px;">Aparecem na qualificação do CONTRATADO, no foro e na assinatura. Ficam salvos neste navegador.</p>
+      <form id="form-contratado">
+        <div class="field"><label for="k-nome">Nome</label><input type="text" id="k-nome"></div>
+        <div class="field-row">
+          <div class="field" style="flex:0 0 100px"><label for="k-doc_tipo">Documento</label>
+            <select class="select-input" id="k-doc_tipo"><option>CNPJ</option><option>CPF</option></select></div>
+          <div class="field"><label for="k-doc_numero">Número</label><input type="text" id="k-doc_numero"></div>
+        </div>
+        <div class="field"><label for="k-endereco">Endereço</label><input type="text" id="k-endereco"></div>
+        <div class="field"><label for="k-cidade">Cidade da assinatura</label><input type="text" id="k-cidade" placeholder="Volta Redonda/RJ"></div>
+        <div class="field"><label for="k-foro">Foro (comarca)</label><input type="text" id="k-foro" placeholder="Volta Redonda - Rio de Janeiro"></div>
+        <div class="field"><label for="k-titulo">Nome no título do contrato</label><input type="text" id="k-titulo" placeholder="LUCASM. FOTOGRAFIA"></div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-ghost-sm" id="btn-restaurar-contratado">Restaurar padrão</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn-secondary" id="btn-cancelar-contratado">Cancelar</button>
+      <button type="button" class="btn-primary" id="btn-salvar-contratado">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: link de assinatura -->
+<div class="modal-overlay form-modal" id="modal-link" style="display:none">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-head"><h2>Link de assinatura</h2></div>
+    <div class="modal-body">
+      <p style="font-size:13.5px;color:var(--ink-soft);margin:0 0 8px;" id="link-texto">Envie este link para o cliente. Ele lê o contrato, assina pelo celular e você acompanha aqui na aba <b>Enviados</b>.</p>
+      <div class="link-box">
+        <input type="text" id="link-url" readonly>
+        <button type="button" class="btn-secondary" id="link-copiar">Copiar</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a class="btn-secondary btn-whats" id="link-whats" target="_blank" rel="noopener" style="text-decoration:none">Enviar no WhatsApp</a>
+        <a class="btn-secondary" id="link-abrir" target="_blank" rel="noopener" style="text-decoration:none">Abrir como o cliente vê</a>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div class="spacer"></div>
+      <button type="button" class="btn-primary" id="link-fechar">Pronto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: assinatura -->
+<div class="modal-overlay form-modal" id="modal-assinatura" style="display:none">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-head"><h2>Minha assinatura</h2></div>
+    <div class="modal-body">
+      <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 12px;">Assine com o dedo (celular/tablet) ou com o mouse. Ela fica salva neste navegador e é aplicada no campo CONTRATADO quando você marcar "Já sair assinado por mim".</p>
+      <canvas class="sig-pad" id="sig-pad"></canvas>
+      <div class="sig-tools">
+        <button type="button" class="btn-ghost-sm" id="sig-limpar">Limpar</button>
+        <label class="btn-ghost-sm" style="display:inline-flex;align-items:center">Enviar imagem (PNG)
+          <input type="file" id="sig-arquivo" accept="image/png,image/jpeg" style="display:none"></label>
+        <button type="button" class="btn-ghost-sm" id="sig-apagar" style="margin-left:auto;color:var(--error)">Apagar assinatura salva</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div class="spacer"></div>
+      <button type="button" class="btn-secondary" id="sig-cancelar">Cancelar</button>
+      <button type="button" class="btn-primary" id="sig-salvar">Salvar assinatura</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { ensureProfileAndTenant, isTenantActiveNow } from './js/auth.js?v=6';
+  import { parseMoney } from './js/utils.js?v=6';
+  import {
+    CONTRATADO_PADRAO, montarBlocos, camposVazios, ROTULOS_CAMPOS, blocosHtml,
+    valorExtenso, fmtReais, fmtCPF, gerarPdfContrato, codigoContrato,
+    hashConteudo, gerarPdfDoRegistro, nomeArquivoContrato, fmtDataHora,
+  } from './js/contrato.js?v=2';
+  import { criarPadAssinatura } from './js/assinatura-pad.js?v=1';
+
+  // --- Sessão + tenant ---
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) window.location.href = 'login.html';
+
+  let tenant;
+  try {
+    const profile = await ensureProfileAndTenant(session.user);
+    tenant = profile.tenants;
+    if (!isTenantActiveNow(tenant)) window.location.href = 'login.html';
+    else if (!tenant.onboarding_completo) window.location.href = 'onboarding.html';
+  } catch (err) {
+    console.error(err);
+    window.location.href = 'login.html';
+  }
+
+  document.getElementById('btn-logout').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  // --- armazenamento local (por estúdio) ---
+  const K_CFG = `sf_contrato_cfg_${tenant.id}`;
+  const K_SIG = `sf_assinatura_${tenant.id}`;
+  const K_RASC = `sf_contrato_rascunho_${tenant.id}`;
+  const lsGet = (k, def = null) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } };
+  const lsSet = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) { console.warn(e); } };
+
+  let contratado = { ...CONTRATADO_PADRAO, ...(lsGet(K_CFG) || {}) };
+  let assinatura = lsGet(K_SIG); // dataURL
+  const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
+  const CAMPOS = ['contratante_nome', 'contratante_qualificacao', 'contratante_cpf', 'contratante_endereco',
+    'servico', 'evento', 'data_evento', 'hora_inicio', 'hora_fim', 'horas', 'horario_evento', 'local',
+    'qtd_profissionais', 'modalidade', 'valor', 'pagamento', 'data_assinatura'];
+  const el = (k) => document.getElementById('c-' + k);
+
+  // campos "automáticos" deixam de ser automáticos quando você edita na mão
+  const manual = { horas: false, horario_evento: false, modalidade: false };
+
+  function coletar() {
+    const d = {};
+    CAMPOS.forEach(k => d[k] = el(k).value.trim());
+    d.valor = d.valor ? parseMoney(d.valor) : '';
+    d.qtd_profissionais = parseInt(d.qtd_profissionais, 10) || '';
+    d.contratado = contratado;
+    return d;
+  }
+
+  function preencher(d) {
+    CAMPOS.forEach(k => { if (d[k] !== undefined && d[k] !== null) el(k).value = d[k]; });
+    if (d._manual) Object.assign(manual, d._manual);
+  }
+
+  // --- pré-visualização ---
+  const paper = document.getElementById('ct-paper');
+  const esc = (s) => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+
+  function render() {
+    const d = coletar();
+    const blocos = montarBlocos(d);
+    let html = `<img class="logo" src="assets/logo-contrato.png" alt="">` + blocosHtml(blocos);
+    const usarAss = document.getElementById('c-assinar').checked && assinatura;
+    html += `<div class="assin">
+      <div><div class="linha">CONTRATANTE</div><div class="sub">${esc(d.contratante_nome || '')}</div><div class="sub">${d.contratante_cpf ? 'CPF ' + esc(d.contratante_cpf) : ''}</div></div>
+      <div>${usarAss ? `<img src="${assinatura}" alt="assinatura">` : ''}<div class="linha">CONTRATADO</div><div class="sub">${esc(contratado.nome)}</div><div class="sub">${esc(contratado.doc_tipo + ' ' + contratado.doc_numero)}</div></div>
+    </div>`;
+    paper.innerHTML = html;
+
+    // campos vazios: destaca no formulário + contador
+    const vazios = camposVazios(blocos);
+    document.querySelectorAll('.ct-card .field[data-k]').forEach(f => f.classList.toggle('vazio', vazios.includes(f.dataset.k)));
+    const faltam = document.getElementById('ct-faltam');
+    if (vazios.length) {
+      faltam.className = 'ct-faltam';
+      faltam.textContent = `Faltam ${vazios.length}: ${vazios.map(k => ROTULOS_CAMPOS[k]).join(', ')}`;
+    } else {
+      faltam.className = 'ct-faltam ok';
+      faltam.textContent = 'Tudo preenchido ✓';
+    }
+
+    const v = parseMoney(el('valor').value);
+    document.getElementById('valor-extenso').textContent = v > 0 ? `R$ ${fmtReais(v)} (${valorExtenso(v)})` : 'O valor por extenso é escrito automaticamente.';
+
+    lsSet(K_RASC, { ...d, contratado: undefined, valor: el('valor').value, _manual: manual });
+  }
+
+  // clicar num trecho da pré-visualização leva ao campo
+  paper.addEventListener('click', (e) => {
+    const span = e.target.closest('.v');
+    if (!span) return;
+    const k = span.dataset.k;
+    const input = el(k);
+    if (!input) return;
+    const field = input.closest('.field');
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => input.focus({ preventScroll: true }), 250);
+    field.classList.add('flash');
+    setTimeout(() => field.classList.remove('flash'), 1200);
+  });
+
+  // --- automações ---
+  function calcHoras() {
+    const a = el('hora_inicio').value, b = el('hora_fim').value;
+    if (!a || !b) return;
+    const [ah, am] = a.split(':').map(Number), [bh, bm] = b.split(':').map(Number);
+    let min = (bh * 60 + bm) - (ah * 60 + am);
+    if (min <= 0) min += 24 * 60; // vira a meia-noite
+    const h = Math.round(min / 60 * 10) / 10;
+    el('horas').value = String(h).replace('.', ',');
+  }
+
+  el('hora_inicio').addEventListener('input', () => {
+    if (!manual.horario_evento) el('horario_evento').value = el('hora_inicio').value;
+    if (!manual.horas) calcHoras();
+  });
+  el('hora_fim').addEventListener('input', () => { if (!manual.horas) calcHoras(); });
+  el('horas').addEventListener('input', () => { manual.horas = !!el('horas').value; });
+  el('horario_evento').addEventListener('input', () => { manual.horario_evento = el('horario_evento').value !== el('hora_inicio').value; });
+  el('servico').addEventListener('change', () => { if (!manual.modalidade) el('modalidade').value = el('servico').value; });
+  el('modalidade').addEventListener('input', () => { manual.modalidade = !!el('modalidade').value && el('modalidade').value !== el('servico').value; });
+  el('contratante_cpf').addEventListener('input', (e) => { e.target.value = fmtCPF(e.target.value); });
+
+  // presets de pagamento
+  document.querySelectorAll('.chip[data-preset]').forEach(btn => btn.addEventListener('click', () => {
+    const v = parseMoney(el('valor').value);
+    const p = btn.dataset.preset;
+    let txt = '';
+    if (p === 'pix') txt = 'Pagamento integral à vista, via PIX, até a data do evento.';
+    if (p === 'sinal') {
+      const sinal = v * 0.10, resto = v - sinal;
+      txt = v > 0
+        ? `Sinal de R$ ${fmtReais(sinal)} (10%) no ato da assinatura deste contrato, para reserva da data, e o restante de R$ ${fmtReais(resto)} até a data do evento, via PIX.`
+        : 'Sinal de 10% do valor total no ato da assinatura deste contrato, para reserva da data, e o restante até a data do evento, via PIX.';
+    }
+    if (p === 'cartao') {
+      txt = v > 0
+        ? `Parcelado em até 12x no cartão de crédito, com acréscimo de 15%, totalizando R$ ${fmtReais(v * 1.15)} (12x de R$ ${fmtReais(v * 1.15 / 12)}).`
+        : 'Parcelado em até 12x no cartão de crédito, com acréscimo de 15%.';
+    }
+    el('pagamento').value = txt;
+    render();
+  }));
+
+  document.getElementById('form-contrato').addEventListener('input', render);
+  document.getElementById('form-contrato').addEventListener('change', render);
+  document.getElementById('form-contrato').addEventListener('submit', e => e.preventDefault());
+
+  // --- puxar de um trabalho (jobs + clients + packages) ---
+  let jobsCache = [];
+  async function carregarJobs() {
+    const sel = el('job');
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('id, tipo_trabalho, data_evento, horario, local, stage, clients(nome, telefone), packages(nome, valor, tempo, is_foto, is_video, ordem)')
+      .order('data_evento', { ascending: false, nullsFirst: false });
+    if (error) { console.error(error); sel.innerHTML = `<option value="">Não foi possível carregar os trabalhos</option>`; return; }
+    jobsCache = data || [];
+    const fmt = (iso) => iso ? iso.split('-').reverse().join('/') : 'sem data';
+    sel.innerHTML = `<option value="">— Preencher manualmente —</option>` + jobsCache.map(j =>
+      `<option value="${j.id}">${esc(j.clients?.nome || 'Sem cliente')} · ${esc(j.tipo_trabalho || 'Trabalho')} · ${fmt(j.data_evento)}</option>`).join('');
+  }
+
+  function pacotesDoJob(job) { return (job.packages || []).slice().sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0)); }
+
+  function aplicarPacote(p) {
+    if (!p) return;
+    if (p.valor) el('valor').value = fmtReais(p.valor);
+    const serv = p.is_foto && p.is_video ? 'fotografia e filmagem' : p.is_video ? 'filmagem' : p.is_foto ? 'fotografia' : '';
+    if (serv) { el('servico').value = serv; if (!manual.modalidade) el('modalidade').value = serv; }
+    const h = parseFloat(String(p.tempo || '').replace(',', '.').replace(/[^\d.]/g, ''));
+    if (h > 0) {
+      el('horas').value = String(h).replace('.', ','); manual.horas = true;
+      // com o horário de início + horas do pacote, calcula o término
+      const ini = el('hora_inicio').value;
+      if (ini && !el('hora_fim').value) {
+        const [hh, mm] = ini.split(':').map(Number);
+        const fim = (hh * 60 + mm + Math.round(h * 60)) % (24 * 60);
+        el('hora_fim').value = `${String(Math.floor(fim / 60)).padStart(2, '0')}:${String(fim % 60).padStart(2, '0')}`;
+      }
+    }
+  }
+
+  el('job').addEventListener('change', () => {
+    const job = jobsCache.find(j => j.id === el('job').value);
+    const wrapPkg = document.getElementById('wrap-pacote');
+    if (!job) { wrapPkg.style.display = 'none'; return; }
+    if (job.clients?.nome) el('contratante_nome').value = job.clients.nome;
+    if (job.tipo_trabalho) el('evento').value = job.tipo_trabalho;
+    if (job.data_evento) el('data_evento').value = job.data_evento;
+    if (job.local) el('local').value = job.local;
+    const hm = String(job.horario || '').match(/(\d{1,2})[:h](\d{2})?/);
+    if (hm) {
+      const t = `${hm[1].padStart(2, '0')}:${hm[2] || '00'}`;
+      el('hora_inicio').value = t; el('horario_evento').value = t; manual.horario_evento = false;
+      el('hora_fim').value = '';
+    }
+    const pkgs = pacotesDoJob(job);
+    const selPkg = document.getElementById('c-pacote');
+    if (pkgs.length > 1) {
+      selPkg.innerHTML = pkgs.map((p, i) => `<option value="${i}">${esc(p.nome)} — R$ ${fmtReais(p.valor)}</option>`).join('');
+      wrapPkg.style.display = '';
+    } else wrapPkg.style.display = 'none';
+    manual.horas = false;
+    aplicarPacote(pkgs[0]);
+    if (!el('data_assinatura').value) el('data_assinatura').value = hojeISO();
+    render();
+  });
+
+  document.getElementById('c-pacote').addEventListener('change', (e) => {
+    const job = jobsCache.find(j => j.id === el('job').value);
+    if (!job) return;
+    el('hora_fim').value = '';
+    aplicarPacote(pacotesDoJob(job)[parseInt(e.target.value, 10)]);
+    render();
+  });
+
+  // --- limpar ---
+  document.getElementById('btn-limpar').addEventListener('click', () => {
+    if (!confirm('Limpar todos os campos do contrato?')) return;
+    CAMPOS.forEach(k => el(k).value = '');
+    el('qtd_profissionais').value = '1';
+    el('data_assinatura').value = hojeISO();
+    el('job').value = '';
+    document.getElementById('wrap-pacote').style.display = 'none';
+    Object.keys(manual).forEach(k => manual[k] = false);
+    render();
+  });
+
+  // --- gerar PDF ---
+  document.getElementById('btn-gerar').addEventListener('click', async () => {
+    const d = coletar();
+    const vazios = camposVazios(montarBlocos(d));
+    if (vazios.length && !confirm(`Ainda faltam ${vazios.length} campo(s): ${vazios.map(k => ROTULOS_CAMPOS[k]).join(', ')}.\n\nGerar o PDF assim mesmo (com os espaços em branco)?`)) return;
+
+    const assinar = document.getElementById('c-assinar').checked && !!assinatura;
+    const btn = document.getElementById('btn-gerar');
+    btn.disabled = true; btn.textContent = 'Gerando…';
+    try {
+      const codigo = await codigoContrato({ ...d, t: Date.now() });
+      const doc = await gerarPdfContrato(window.jspdf.jsPDF, d, {
+        logo: 'assets/logo-contrato.png',
+        assinatura: assinar ? assinatura : null,
+        assinadoEm: assinar ? new Date() : null,
+        codigo,
+      });
+      doc.save(nomeArquivoContrato(d));
+    } catch (err) {
+      console.error(err);
+      alert('Não foi possível gerar o PDF. Tente novamente.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Gerar PDF';
+    }
+  });
+
+  // ============================================================
+  // ENVIAR PARA ASSINATURA (tabela contratos no Supabase)
+  // ============================================================
+  const baseUrl = location.href.split('?')[0].split('#')[0].replace(/[^/]*$/, '');
+  const linkDe = (token) => `${baseUrl}assinar.html?t=${token}`;
+  const tabelaFalta = (err) => err && (err.code === '42P01' || err.code === 'PGRST205' || /contratos/.test(err.message || '') && /(not exist|schema cache)/i.test(err.message || ''));
+
+  function telefoneWhats(tel) {
+    let n = String(tel || '').replace(/\D/g, '');
+    if (!n) return '';
+    if (n.length <= 11) n = '55' + n;
+    return n;
+  }
+
+  function abrirModalLink(token, nomeCliente, telefone) {
+    const url = linkDe(token);
+    document.getElementById('link-url').value = url;
+    document.getElementById('link-abrir').href = url;
+    const primeiro = (nomeCliente || '').split(' ')[0];
+    const msg = `Olá${primeiro ? ', ' + primeiro : ''}! Segue o contrato da ${contratado.titulo === CONTRATADO_PADRAO.titulo ? 'LucasM. Fotografia' : contratado.nome} para você ler e assinar pelo celular:\n${url}`;
+    const fone = telefoneWhats(telefone);
+    document.getElementById('link-whats').href = `https://wa.me/${fone}?text=${encodeURIComponent(msg)}`;
+    document.getElementById('modal-link').style.display = 'flex';
+  }
+  document.getElementById('link-fechar').addEventListener('click', () => document.getElementById('modal-link').style.display = 'none');
+  document.getElementById('modal-link').addEventListener('click', (e) => { if (e.target.id === 'modal-link') e.target.style.display = 'none'; });
+  document.getElementById('link-copiar').addEventListener('click', async () => {
+    const inp = document.getElementById('link-url');
+    try { await navigator.clipboard.writeText(inp.value); } catch { inp.select(); document.execCommand('copy'); }
+    const b = document.getElementById('link-copiar'); b.textContent = 'Copiado ✓'; setTimeout(() => b.textContent = 'Copiar', 1600);
+  });
+
+  document.getElementById('btn-enviar').addEventListener('click', async () => {
+    const d = coletar();
+    const vazios = camposVazios(montarBlocos(d));
+    if (vazios.length) {
+      alert(`Para enviar ao cliente, preencha antes: ${vazios.map(k => ROTULOS_CAMPOS[k]).join(', ')}.`);
+      return;
+    }
+    const assinar = document.getElementById('c-assinar').checked && !!assinatura;
+    if (!assinar && !confirm('O contrato vai sem a SUA assinatura (só o cliente vai assinar).\n\nDica: cadastre sua assinatura em "Minha assinatura" e marque "Já sair assinado por mim".\n\nEnviar mesmo assim?')) return;
+
+    const btn = document.getElementById('btn-enviar');
+    btn.disabled = true; btn.textContent = 'Salvando…';
+    try {
+      const dados = { ...d, contratado: { ...contratado } };
+      const job = jobsCache.find(j => j.id === el('job').value);
+      const registro = {
+        tenant_id: tenant.id,
+        job_id: job ? job.id : null,
+        codigo: await codigoContrato({ ...dados, t: Date.now() }),
+        dados,
+        hash_conteudo: await hashConteudo(dados),
+        assinatura_contratado: assinar ? assinatura : null,
+        contratado_assinado_em: assinar ? new Date().toISOString() : null,
+      };
+      const { data, error } = await supabase.from('contratos').insert(registro).select('id, token').single();
+      if (error) {
+        if (tabelaFalta(error)) { alert('A tabela de contratos ainda não existe no seu Supabase. Rode o arquivo supabase/contratos.sql no SQL Editor (instruções na aba Enviados).'); return; }
+        throw error;
+      }
+      abrirModalLink(data.token, d.contratante_nome, job && job.clients ? job.clients.telefone : '');
+      carregarEnviados();
+    } catch (err) {
+      console.error(err);
+      alert('Não foi possível salvar o contrato: ' + (err.message || err));
+    } finally {
+      btn.disabled = false; btn.textContent = 'Enviar para o cliente assinar';
+    }
+  });
+
+  // --- abas ---
+  document.querySelectorAll('.ct-tab').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.ct-tab').forEach(x => x.classList.toggle('active', x === t));
+    const enviados = t.dataset.tab === 'enviados';
+    document.getElementById('tab-enviados').style.display = enviados ? '' : 'none';
+    document.getElementById('tab-novo').style.display = enviados ? 'none' : '';
+    if (enviados) carregarEnviados();
+  }));
+
+  // --- lista de enviados ---
+  const areaEnviados = document.getElementById('area-enviados');
+  let enviadosCache = [];
+
+  async function carregarEnviados() {
+    const { data, error } = await supabase
+      .from('contratos')
+      .select('id, token, codigo, status, dados, created_at, cliente_nome, cliente_assinado_em, cliente_visualizado_em, job_id')
+      .order('created_at', { ascending: false });
+    const badge = document.getElementById('badge-pend');
+    if (error) {
+      console.error(error);
+      badge.style.display = 'none';
+      areaEnviados.innerHTML = tabelaFalta(error)
+        ? `<div class="setup-box"><b>Falta um passo para ativar a assinatura por link.</b><br>
+            1. Abra o painel do Supabase → <b>SQL Editor</b> → <b>New query</b>.<br>
+            2. Cole o conteúdo do arquivo <code>supabase/contratos.sql</code> (está na pasta do projeto) e clique em <b>Run</b>.<br>
+            3. Volte aqui e recarregue a página.</div>`
+        : `<div class="empty-state">Não foi possível carregar os contratos.</div>`;
+      return;
+    }
+    enviadosCache = data || [];
+    const pend = enviadosCache.filter(c => c.status === 'pendente').length;
+    badge.textContent = pend; badge.style.display = pend ? '' : 'none';
+
+    if (!enviadosCache.length) {
+      areaEnviados.innerHTML = `<div class="empty-state">Nenhum contrato enviado ainda. Preencha um em "Novo contrato" e clique em "Enviar para o cliente assinar".</div>`;
+      return;
+    }
+    const fmtD = (iso) => iso ? iso.split('-').reverse().join('/') : '—';
+    const linhas = enviadosCache.map(c => {
+      const d = c.dados || {};
+      let st = '';
+      if (c.status === 'assinado') st = `<span class="st assinado">Assinado</span><span class="st-sub">${fmtDataHora(c.cliente_assinado_em)}</span>`;
+      else if (c.status === 'cancelado') st = `<span class="st cancelado">Cancelado</span>`;
+      else st = `<span class="st pendente">Aguardando</span><span class="st-sub">${c.cliente_visualizado_em ? 'cliente já abriu o link' : 'link ainda não aberto'}</span>`;
+      return `<tr class="sem-click" data-id="${c.id}">
+        <td><b>${esc(d.contratante_nome || '—')}</b><span class="st-sub">nº ${esc(c.codigo)}</span></td>
+        <td>${esc(d.evento || '—')}<span class="st-sub">${fmtD(d.data_evento)}</span></td>
+        <td>${fmtDataHora(c.created_at)}</td>
+        <td>${st}</td>
+        <td><div class="acoes">
+          ${c.status === 'pendente' ? `<button type="button" class="btn-ghost-sm" data-acao="link">Link</button>` : ''}
+          <button type="button" class="btn-ghost-sm" data-acao="pdf">${c.status === 'assinado' ? 'PDF assinado' : 'PDF'}</button>
+          ${c.status === 'pendente' ? `<button type="button" class="btn-ghost-sm" data-acao="cancelar" style="color:var(--error)">Cancelar</button>` : ''}
+        </div></td>
+      </tr>`;
+    }).join('');
+    areaEnviados.innerHTML = `<div class="list-card"><table>
+      <thead><tr><th>Cliente</th><th>Evento</th><th>Enviado em</th><th>Situação</th><th></th></tr></thead>
+      <tbody>${linhas}</tbody></table></div>`;
+  }
+
+  areaEnviados.addEventListener('click', async (e) => {
+    const b = e.target.closest('button[data-acao]');
+    if (!b) return;
+    const id = b.closest('tr').dataset.id;
+    const c = enviadosCache.find(x => x.id === id);
+    if (!c) return;
+    const acao = b.dataset.acao;
+
+    if (acao === 'link') {
+      let tel = '';
+      if (c.job_id) { const j = jobsCache.find(x => x.id === c.job_id); tel = j && j.clients ? j.clients.telefone : ''; }
+      abrirModalLink(c.token, c.dados && c.dados.contratante_nome, tel);
+    }
+    if (acao === 'cancelar') {
+      if (!confirm('Cancelar este contrato? O link deixa de aceitar assinatura.')) return;
+      const { error } = await supabase.from('contratos').update({ status: 'cancelado' }).eq('id', id).eq('status', 'pendente');
+      if (error) { console.error(error); alert('Não foi possível cancelar.'); return; }
+      carregarEnviados();
+    }
+    if (acao === 'pdf') {
+      const txt = b.textContent; b.disabled = true; b.textContent = 'Gerando…';
+      try {
+        const { data: r, error } = await supabase.from('contratos').select('*').eq('id', id).single();
+        if (error) throw error;
+        const doc = await gerarPdfDoRegistro(window.jspdf.jsPDF, r, { link: linkDe(r.token) });
+        doc.save(nomeArquivoContrato(r.dados || {}, r.status === 'assinado' ? '-assinado' : ''));
+      } catch (err) { console.error(err); alert('Não foi possível gerar o PDF.'); }
+      b.disabled = false; b.textContent = txt;
+    }
+  });
+
+  // --- modal: dados do contratado ---
+  const modalK = document.getElementById('modal-contratado');
+  const KCAMPOS = ['nome', 'doc_tipo', 'doc_numero', 'endereco', 'cidade', 'foro', 'titulo'];
+  function abrirContratado(dados = contratado) {
+    KCAMPOS.forEach(k => document.getElementById('k-' + k).value = dados[k] || '');
+    modalK.style.display = 'flex';
+  }
+  document.getElementById('btn-dados-contratado').addEventListener('click', () => abrirContratado());
+  document.getElementById('btn-restaurar-contratado').addEventListener('click', () => abrirContratado(CONTRATADO_PADRAO));
+  document.getElementById('btn-cancelar-contratado').addEventListener('click', () => modalK.style.display = 'none');
+  modalK.addEventListener('click', (e) => { if (e.target === modalK) modalK.style.display = 'none'; });
+  document.getElementById('btn-salvar-contratado').addEventListener('click', () => {
+    const novo = {};
+    KCAMPOS.forEach(k => novo[k] = document.getElementById('k-' + k).value.trim() || CONTRATADO_PADRAO[k]);
+    novo.municipio_deslocamento = novo.cidade;
+    contratado = { ...CONTRATADO_PADRAO, ...novo };
+    lsSet(K_CFG, contratado);
+    modalK.style.display = 'none';
+    render();
+  });
+
+  // --- assinatura: miniatura ---
+  function atualizarMiniatura() {
+    const thumb = document.getElementById('sign-thumb');
+    const chk = document.getElementById('c-assinar');
+    const hint = document.getElementById('sign-hint');
+    if (assinatura) {
+      thumb.style.backgroundImage = `url(${assinatura})`; thumb.textContent = '';
+      chk.disabled = false;
+      hint.textContent = 'Sua assinatura salva entra acima da linha do CONTRATADO.';
+    } else {
+      thumb.style.backgroundImage = ''; thumb.textContent = 'sem assinatura';
+      chk.checked = false; chk.disabled = true;
+      hint.textContent = 'Cadastre sua assinatura em "Minha assinatura".';
+    }
+  }
+
+  // --- assinatura: pad de desenho ---
+  const modalS = document.getElementById('modal-assinatura');
+  const pad = criarPadAssinatura(document.getElementById('sig-pad'));
+
+  document.getElementById('btn-minha-assinatura').addEventListener('click', () => {
+    modalS.style.display = 'flex';
+    requestAnimationFrame(() => { pad.preparar(); if (assinatura) pad.desenharImagem(assinatura); });
+  });
+  document.getElementById('sig-limpar').addEventListener('click', () => pad.limpar());
+  document.getElementById('sig-cancelar').addEventListener('click', () => modalS.style.display = 'none');
+  modalS.addEventListener('click', (e) => { if (e.target === modalS) modalS.style.display = 'none'; });
+  document.getElementById('sig-arquivo').addEventListener('change', async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    pad.preparar();
+    await pad.desenharImagem(url, 10);
+    URL.revokeObjectURL(url);
+    e.target.value = '';
+  });
+  document.getElementById('sig-salvar').addEventListener('click', () => {
+    const data = pad.exportar();
+    if (!data) { alert('Desenhe sua assinatura primeiro.'); return; }
+    assinatura = data;
+    lsSet(K_SIG, assinatura);
+    modalS.style.display = 'none';
+    atualizarMiniatura();
+    document.getElementById('c-assinar').checked = true;
+    render();
+  });
+  document.getElementById('sig-apagar').addEventListener('click', () => {
+    if (!confirm('Apagar a assinatura salva neste navegador?')) return;
+    assinatura = null; lsSet(K_SIG, null);
+    pad.limpar(); atualizarMiniatura(); render();
+  });
+
+  // --- início ---
+  const rasc = lsGet(K_RASC);
+  if (rasc) preencher(rasc);
+  if (!el('data_assinatura').value) el('data_assinatura').value = hojeISO();
+  if (!el('qtd_profissionais').value) el('qtd_profissionais').value = '1';
+  atualizarMiniatura();
+  render();
+  await carregarJobs();
+  carregarEnviados(); // atualiza o contador de pendentes
+</script>
+
+</body>
+</html>

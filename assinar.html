@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Assinatura de contrato</title>
+<link rel="icon" href="assets/logo-small.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root { --ink: #1C1626; --soft: #6B647A; --faint: #9791A3; --line: #E3DEEC; --bg: #F4F2F7; --blue: #2E86DE; --blue-dark: #1B5FA8; --ok: #3F8B5D; --ok-bg: #E9F5EE; --warn: #9A6A00; --warn-bg: #FFF4D6; --err: #C0473A; --err-bg: #FBEAEA; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif; }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 22px 14px 60px; }
+  .topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .topo img { height: 44px; }
+  .pill { font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 999px; }
+  .pill.pendente { background: var(--warn-bg); color: var(--warn); }
+  .pill.assinado { background: var(--ok-bg); color: var(--ok); }
+  .pill.cancelado { background: var(--err-bg); color: var(--err); }
+  .aviso { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; font-size: 14.5px; line-height: 1.5; }
+  .aviso b { color: var(--blue-dark); }
+  .aviso.erro { border-color: #F3CFCF; background: var(--err-bg); color: var(--err); }
+  .aviso.ok { border-color: #C9E5D4; background: var(--ok-bg); color: #2C6B45; }
+
+  .paper { background: #fff; border-radius: 4px; box-shadow: 0 2px 14px rgba(0,0,0,.07); padding: 34px 40px 44px; color: #1A1A1A; font-family: Helvetica, Arial, sans-serif; font-size: 13.5px; line-height: 1.6; }
+  @media (max-width: 600px) { .paper { padding: 22px 18px 30px; font-size: 13px; } }
+  .paper .logo { display: block; width: 170px; margin: 0 auto 20px; }
+  .paper .titulo { text-align: center; font-weight: 700; font-size: 14.5px; margin-bottom: 18px; }
+  .paper p { text-align: justify; margin: 0 0 9px; white-space: pre-line; }
+  .paper .h { color: #1F5FA8; font-weight: 700; margin-top: 16px; margin-bottom: 4px; }
+  .paper .accent { color: #1F5FA8; }
+  .paper .assin { display: flex; justify-content: space-between; gap: 24px; margin-top: 60px; text-align: center; font-size: 11.5px; }
+  .paper .assin > div { flex: 1; position: relative; min-width: 0; }
+  .paper .assin .linha { border-top: 1px solid #444; padding-top: 6px; font-weight: 700; font-size: 12.5px; }
+  .paper .assin .sub { color: #8A8A8A; }
+  .paper .assin img { position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, 6px); max-width: 90%; max-height: 64px; }
+
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-top: 18px; }
+  .card h2 { font-size: 17px; margin: 0 0 4px; }
+  .card .sub { color: var(--soft); font-size: 13.5px; margin: 0 0 16px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--soft); margin-bottom: 6px; }
+  .field input { width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 16px; background: #FAF9FC; }
+  .field input:focus { outline: none; border-color: var(--blue); background: #fff; }
+  .row { display: flex; gap: 12px; } .row .field { flex: 1; min-width: 0; }
+  @media (max-width: 520px) { .row { flex-direction: column; gap: 0; } }
+  .pad-wrap { position: relative; }
+  .pad { width: 100%; height: 200px; border: 1.5px dashed #B9B2C8; border-radius: 10px; background: #fff; touch-action: none; display: block; cursor: crosshair; }
+  .pad-dica { position: absolute; left: 0; right: 0; bottom: 34px; text-align: center; color: #C9C3D4; font-size: 13px; pointer-events: none; }
+  .pad-linha { position: absolute; left: 10%; right: 10%; bottom: 52px; border-top: 1px solid #E3DEEC; pointer-events: none; }
+  .pad-tools { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 12.5px; color: var(--faint); }
+  .check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.45; margin: 18px 0; cursor: pointer; }
+  .check input { width: 20px; height: 20px; margin-top: 1px; flex-shrink: 0; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 18px; border-radius: 10px; border: none; font: inherit; font-weight: 700; font-size: 15.5px; cursor: pointer; background: var(--blue); color: #fff; width: 100%; }
+  .btn:hover { background: var(--blue-dark); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn.sec { background: #F2EFF6; color: var(--ink); width: auto; padding: 8px 12px; font-size: 13px; font-weight: 600; }
+  .msg { font-size: 13.5px; margin-top: 10px; min-height: 18px; }
+  .msg.erro { color: var(--err); }
+  .rodape { text-align: center; color: var(--faint); font-size: 11.5px; margin-top: 26px; line-height: 1.6; }
+  .carregando { text-align: center; color: var(--soft); padding: 80px 0; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="carregando">Carregando contrato…</div></div>
+
+<script type="module">
+  import { supabase } from './js/supabase-client.js?v=5';
+  import { montarBlocos, blocosHtml, hashConteudo, fmtCPF, fmtDataHora, gerarPdfDoRegistro, nomeArquivoContrato, CONTRATADO_PADRAO } from './js/contrato.js?v=2';
+  import { criarPadAssinatura } from './js/assinatura-pad.js?v=1';
+
+  const app = document.getElementById('app');
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  const token = new URLSearchParams(location.search).get('t') || '';
+  const linkContrato = location.href.split('#')[0];
+
+  function erro(msg) {
+    app.innerHTML = `<div class="topo"><img src="assets/logo-contrato.png" alt=""></div><div class="aviso erro">${msg}</div>`;
+  }
+
+  async function buscar() {
+    const { data, error } = await supabase.rpc('contrato_por_token', { p_token: token });
+    if (error) throw error;
+    return data && data[0];
+  }
+
+  async function iniciar() {
+    if (!/^[0-9a-f-]{36}$/i.test(token)) return erro('Link de assinatura inválido. Confira se você copiou o link completo.');
+    let r;
+    try { r = await buscar(); } catch (e) { console.error(e); return erro('Não foi possível abrir o contrato agora. Tente novamente em alguns minutos.'); }
+    if (!r) return erro('Contrato não encontrado. O link pode estar incorreto ou ter sido cancelado.');
+    montarTela(r);
+  }
+
+  function montarTela(r) {
+    const d = r.dados || {};
+    const c = { ...CONTRATADO_PADRAO, ...(d.contratado || {}) };
+    const statusTxt = { pendente: 'Aguardando sua assinatura', assinado: 'Contrato assinado', cancelado: 'Contrato cancelado' }[r.status];
+
+    let topoAviso = '';
+    if (r.status === 'pendente') topoAviso = `<div class="aviso">Olá${d.contratante_nome ? ', <b>' + esc(d.contratante_nome.split(' ')[0]) + '</b>' : ''}! Leia o contrato com atenção. A assinatura fica no final da página.</div>`;
+    if (r.status === 'assinado') topoAviso = `<div class="aviso ok">Contrato assinado por <b>${esc(r.cliente_nome)}</b> em ${fmtDataHora(r.cliente_assinado_em)}. <br><button class="btn" style="margin-top:12px" id="btn-baixar">Baixar contrato assinado (PDF)</button></div>`;
+    if (r.status === 'cancelado') topoAviso = `<div class="aviso erro">Este contrato foi cancelado pelo ${esc(c.nome)}. Se tiver dúvidas, fale diretamente com ele.</div>`;
+
+    const assinContr = r.assinatura_contratado ? `<img src="${r.assinatura_contratado}" alt="">` : '';
+    const assinCli = r.cliente_assinatura ? `<img src="${r.cliente_assinatura}" alt="">` : '';
+
+    app.innerHTML = `
+      <div class="topo"><img src="assets/logo-contrato.png" alt=""><span class="pill ${r.status}">${statusTxt}</span></div>
+      ${topoAviso}
+      <div class="paper">
+        <img class="logo" src="assets/logo-contrato.png" alt="">
+        ${blocosHtml(montarBlocos(d), { destacarCampos: false })}
+        <div class="assin">
+          <div>${assinCli}<div class="linha">CONTRATANTE</div><div class="sub">${esc(r.cliente_nome || d.contratante_nome || '')}</div></div>
+          <div>${assinContr}<div class="linha">CONTRATADO</div><div class="sub">${esc(c.nome)}</div></div>
+        </div>
+      </div>
+      ${r.status === 'pendente' ? formAssinatura(d) : ''}
+      <div class="rodape">Contrato nº ${esc(r.codigo)}<br>Assinatura eletrônica com registro de data, hora, IP e dispositivo.</div>
+    `;
+
+    const btnBaixar = document.getElementById('btn-baixar');
+    if (btnBaixar) btnBaixar.addEventListener('click', () => baixar(r, btnBaixar));
+    if (r.status === 'pendente') ligarFormulario(r);
+  }
+
+  function formAssinatura(d) {
+    return `
+      <div class="card" id="card-assinar">
+        <h2>Assinar contrato</h2>
+        <p class="sub">Confira seus dados e assine com o dedo (no celular) ou com o mouse.</p>
+        <div class="row">
+          <div class="field"><label for="a-nome">Nome completo</label><input id="a-nome" value="${esc(d.contratante_nome || '')}" autocomplete="name"></div>
+          <div class="field"><label for="a-cpf">CPF</label><input id="a-cpf" inputmode="numeric" value="${esc(d.contratante_cpf || '')}" placeholder="000.000.000-00"></div>
+        </div>
+        <div class="field" style="margin-bottom:0"><label>Sua assinatura</label></div>
+        <div class="pad-wrap">
+          <canvas class="pad" id="a-pad"></canvas>
+          <div class="pad-linha"></div>
+          <div class="pad-dica" id="a-dica">assine aqui</div>
+        </div>
+        <div class="pad-tools"><span>Ficou ruim? É só limpar e assinar de novo.</span><button type="button" class="btn sec" id="a-limpar">Limpar</button></div>
+        <label class="check"><input type="checkbox" id="a-aceite">
+          <span>Li todo o contrato e <b>concordo com todos os termos</b>. Concordo também que esta assinatura eletrônica tem a mesma validade da minha assinatura em papel.</span></label>
+        <button class="btn" id="a-assinar" disabled>Assinar contrato</button>
+        <div class="msg" id="a-msg"></div>
+      </div>`;
+  }
+
+  function ligarFormulario(r) {
+    const pad = criarPadAssinatura(document.getElementById('a-pad'));
+    pad.preparar();
+    let larguraAnterior = window.innerWidth;
+    window.addEventListener('resize', () => { if (window.innerWidth !== larguraAnterior && !pad.temTraco) { larguraAnterior = window.innerWidth; pad.preparar(); } });
+
+    const dica = document.getElementById('a-dica');
+    const canvas = document.getElementById('a-pad');
+    canvas.addEventListener('pointerdown', () => dica.style.display = 'none');
+    document.getElementById('a-limpar').addEventListener('click', () => { pad.limpar(); dica.style.display = ''; });
+
+    const cpf = document.getElementById('a-cpf');
+    cpf.addEventListener('input', () => cpf.value = fmtCPF(cpf.value));
+    const aceite = document.getElementById('a-aceite');
+    const btn = document.getElementById('a-assinar');
+    const msg = document.getElementById('a-msg');
+    aceite.addEventListener('change', () => btn.disabled = !aceite.checked);
+
+    btn.addEventListener('click', async () => {
+      msg.className = 'msg erro'; msg.textContent = '';
+      const nome = document.getElementById('a-nome').value.trim();
+      if (nome.split(/\s+/).length < 2) { msg.textContent = 'Informe seu nome completo.'; return; }
+      if (cpf.value.replace(/\D/g, '').length !== 11) { msg.textContent = 'Informe um CPF válido.'; return; }
+      const img = pad.exportar();
+      if (!img) { msg.textContent = 'Faça sua assinatura no quadro acima.'; return; }
+
+      btn.disabled = true; btn.textContent = 'Assinando…';
+      try {
+        // garante que o texto que a pessoa leu é exatamente o que foi enviado
+        const hash = await hashConteudo(r.dados);
+        if (hash !== r.hash_conteudo) throw new Error('O conteúdo do contrato não confere. Peça um novo link.');
+        const { error } = await supabase.rpc('assinar_contrato', {
+          p_token: token, p_assinatura: img, p_nome: nome, p_cpf: cpf.value, p_hash: hash, p_user_agent: navigator.userAgent,
+        });
+        if (error) throw new Error(error.message);
+        const novo = await buscar();
+        montarTela(novo);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (e) {
+        console.error(e);
+        msg.textContent = e.message || 'Não foi possível assinar. Tente novamente.';
+        btn.disabled = false; btn.textContent = 'Assinar contrato';
+      }
+    });
+  }
+
+  async function baixar(r, btn) {
+    const txt = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Gerando PDF…';
+    try {
+      const doc = await gerarPdfDoRegistro(window.jspdf.jsPDF, r, { link: linkContrato });
+      doc.save(nomeArquivoContrato(r.dados || {}, '-assinado'));
+    } catch (e) { console.error(e); alert('Não foi possível gerar o PDF.'); }
+    btn.disabled = false; btn.textContent = txt;
+  }
+
+  iniciar();
+</script>
+</body>
+</html>
